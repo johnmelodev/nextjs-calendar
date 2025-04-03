@@ -25,4 +25,14 @@ export interface ServiceType {
   duration: number;
 }
 
+export interface Client {
+  id: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  cpf: string;
+  email: string;
+  phone: string;
+}
+
 export type FilterType = "all" | string; // 'all' ou ID do profissional

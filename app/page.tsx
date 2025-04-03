@@ -3,13 +3,17 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { Fragment, useState, useMemo } from 'react'
+import { Fragment, useState, useMemo, useRef } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { CheckIcon, ExclamationTriangleIcon, PlusCircleIcon, UsersIcon } from '@heroicons/react/20/solid'
 import { EventSourceInput } from '@fullcalendar/core/index.js'
 import ptBrLocale from '@fullcalendar/core/locales/pt-br'
 import ProfessionalAvatar from './components/ProfessionalAvatar'
-import { Event, Professional, FilterType } from './types'
+import { Event, Professional, FilterType, Client } from './types'
+import AddClientForm from './components/AddClientForm'
+import { CalendarApi } from '@fullcalendar/core'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 // Mock data para profissionais
 const professionals: Professional[] = [
@@ -44,6 +48,11 @@ export default function Home() {
     notes: '',
     time: ''
   })
+  const [showAddClientModal, setShowAddClientModal] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
+  const [selectedView, setSelectedView] = useState('dayGridMonth')
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const calendarRef = useRef<any>(null)
 
   // Filtra eventos baseado no profissional selecionado
   const filteredEvents = useMemo(() => {
@@ -139,16 +148,85 @@ export default function Home() {
     })
   }
 
+  const handleAddClient = (newClient: Omit<Client, 'id'>) => {
+    const client = {
+      ...newClient,
+      id: `client-${Date.now()}`
+    }
+    setClients(prev => [...prev, client])
+  }
+
+  const handlePrevMonth = () => {
+    const calendarApi = calendarRef.current?.getApi()
+    calendarApi?.prev()
+    setCurrentDate(calendarApi?.getDate())
+  }
+
+  const handleNextMonth = () => {
+    const calendarApi = calendarRef.current?.getApi()
+    calendarApi?.next()
+    setCurrentDate(calendarApi?.getDate())
+  }
+
+  const handleToday = () => {
+    const calendarApi = calendarRef.current?.getApi()
+    calendarApi?.today()
+    setCurrentDate(calendarApi?.getDate())
+  }
+
+  const handleViewChange = (view: string) => {
+    setSelectedView(view)
+    const calendarApi = calendarRef.current?.getApi()
+    calendarApi?.changeView(view)
+  }
+
+  const formattedDate = useMemo(() => {
+    if (selectedView === 'timeGridWeek') {
+      const calendarApi = calendarRef.current?.getApi()
+      if (calendarApi) {
+        const start = calendarApi.view.currentStart
+        const end = calendarApi.view.currentEnd
+        const endDate = new Date(end)
+        endDate.setDate(endDate.getDate() - 1)
+        return `${format(start, 'dd/MM/yyyy', { locale: ptBR })} - ${format(endDate, 'dd/MM/yyyy', { locale: ptBR })}`
+      }
+      return ''
+    }
+    return format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
+  }, [currentDate, selectedView])
+
   return (
-    <>
-      <nav className="flex justify-between mb-12 border-b border-violet-100 p-4">
-        <h1 className="font-bold text-2xl text-gray-700">Calendário</h1>
-      </nav>
-      <main className="flex min-h-screen flex-col items-center justify-between p-24">
-        <div className="w-full">
-          <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-gray-100">
+      <div className="px-8 py-6">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl text-gray-700 font-medium">Calendário</h1>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
+          >
+            <PlusCircleIcon className="h-5 w-5" />
+            Novo Agendamento
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="space-y-6">
+            {/* Seção de Profissionais */}
             <div className="flex gap-4">
-              {professionals.map((professional) => (
+              <div className="flex flex-col items-center gap-2 min-w-[72px]">
+                <button
+                  onClick={() => setSelectedProfessional('all')}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium bg-gray-100 transition-all
+                    ${selectedProfessional === 'all' ? 'ring-2 ring-offset-2 ring-violet-600' : ''}
+                  `}
+                >
+                  <span className="text-gray-600">TP</span>
+                </button>
+                <span className="text-xs text-gray-600 text-center">
+                  Todos Profissionais
+                </span>
+              </div>
+              {professionals.filter(p => p.id !== 'all').map((professional) => (
                 <ProfessionalAvatar
                   key={professional.id}
                   name={professional.name}
@@ -158,305 +236,368 @@ export default function Home() {
                 />
               ))}
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-violet-600 px-4 py-2 text-sm font-semibold text-violet-600 hover:bg-violet-50"
-            >
-              <PlusCircleIcon className="h-5 w-5" />
-              Novo Agendamento
-            </button>
-          </div>
-          <FullCalendar
-            plugins={[
-              dayGridPlugin,
-              interactionPlugin,
-              timeGridPlugin
-            ]}
-            locale={ptBrLocale}
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            }}
-            buttonText={{
-              today: 'Hoje',
-              month: 'Mês',
-              week: 'Semana',
-              day: 'Dia'
-            }}
-            dayHeaderFormat={{ weekday: 'long' }}
-            events={filteredEvents as EventSourceInput}
-            nowIndicator={true}
-            editable={true}
-            selectable={true}
-            selectMirror={true}
-            dateClick={handleDateClick}
-            eventClick={(data) => handleDeleteModal(data)}
-            eventContent={(eventInfo) => {
-              return (
-                <div className="p-1">
-                  <div className="text-xs font-semibold">{eventInfo.event.title}</div>
-                  <div className="text-xs">{eventInfo.event.extendedProps.time}</div>
-                </div>
-              )
-            }}
-          />
-        </div>
 
-        <Transition.Root show={showDeleteModal} as={Fragment}>
-          <Dialog as="div" className="relative z-10" onClose={setShowDeleteModal}>
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-
-            >
-              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-            </Transition.Child>
-
-            <div className="fixed inset-0 z-10 overflow-y-auto">
-              <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <Transition.Child
-                  as={Fragment}
-                  enter="ease-out duration-300"
-                  enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                  enterTo="opacity-100 translate-y-0 sm:scale-100"
-                  leave="ease-in duration-200"
-                  leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-                  leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            {/* Seção de Navegação do Calendário */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button 
+                  className="px-4 py-1.5 rounded-full bg-gray-100 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                  onClick={handleToday}
                 >
-                  <Dialog.Panel className="relative transform overflow-hidden rounded-lg
-                   bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+                  Hoje
+                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    className="p-1 rounded-full hover:bg-gray-100"
+                    onClick={handlePrevMonth}
                   >
-                    <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                      <div className="sm:flex sm:items-start">
-                        <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center 
-                      justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                          <ExclamationTriangleIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
-                        </div>
-                        <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                          <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
-                            Delete Event
-                          </Dialog.Title>
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-500">
-                              Are you sure you want to delete this event?
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                      <button type="button" className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm 
-                      font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto" onClick={handleDelete}>
-                        Delete
-                      </button>
-                      <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 
-                      shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                        onClick={handleCloseModal}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </Dialog.Panel>
-                </Transition.Child>
+                    <svg className="w-5 h-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <span className="text-sm font-medium text-gray-900 min-w-[150px] text-center">
+                    {formattedDate}
+                  </span>
+                  <button 
+                    className="p-1 rounded-full hover:bg-gray-100"
+                    onClick={handleNextMonth}
+                  >
+                    <svg className="w-5 h-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="flex rounded-lg overflow-hidden border border-gray-200">
+                <button 
+                  className={`px-4 py-1.5 text-sm font-medium ${selectedView === 'dayGridMonth' ? 'bg-violet-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => handleViewChange('dayGridMonth')}
+                >
+                  Mês
+                </button>
+                <button 
+                  className={`px-4 py-1.5 text-sm font-medium ${selectedView === 'timeGridWeek' ? 'bg-violet-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => handleViewChange('timeGridWeek')}
+                >
+                  Semana
+                </button>
+                <button 
+                  className={`px-4 py-1.5 text-sm font-medium ${selectedView === 'timeGridDay' ? 'bg-violet-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => handleViewChange('timeGridDay')}
+                >
+                  Dia
+                </button>
               </div>
             </div>
-          </Dialog>
-        </Transition.Root>
-        <Transition.Root show={showModal} as={Fragment}>
-          <Dialog as="div" className="relative z-10" onClose={setShowModal}>
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-            </Transition.Child>
 
-            <div className="fixed inset-0 z-10 overflow-y-auto">
-              <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <Transition.Child
-                  as={Fragment}
-                  enter="ease-out duration-300"
-                  enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                  enterTo="opacity-100 translate-y-0 sm:scale-100"
-                  leave="ease-in duration-200"
-                  leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-                  leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            {/* Calendário */}
+            <div className="fc-custom-style">
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[
+                  dayGridPlugin,
+                  interactionPlugin,
+                  timeGridPlugin
+                ]}
+                locale={ptBrLocale}
+                initialView={selectedView}
+                headerToolbar={false}
+                dayHeaderFormat={{ weekday: 'long' }}
+                events={filteredEvents as EventSourceInput}
+                nowIndicator={true}
+                editable={true}
+                selectable={true}
+                selectMirror={true}
+                dateClick={handleDateClick}
+                eventClick={(data) => handleDeleteModal(data)}
+                slotMinTime="08:00:00"
+                slotMaxTime="20:00:00"
+                allDaySlot={false}
+                slotDuration="00:30:00"
+                eventContent={(eventInfo) => {
+                  const eventColor = eventInfo.event.backgroundColor || '#E2E8F0'
+                  return (
+                    <div 
+                      className="p-1 rounded"
+                      style={{ 
+                        borderLeft: `3px solid ${eventColor}`,
+                        backgroundColor: `${eventColor}20`
+                      }}
+                    >
+                      <div className="text-xs font-medium text-gray-900">{eventInfo.event.title}</div>
+                      <div className="text-xs text-gray-600">{eventInfo.event.extendedProps.time}</div>
+                    </div>
+                  )
+                }}
+                height="auto"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Transition.Root show={showDeleteModal} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={setShowDeleteModal}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 z-10 overflow-y-auto">
+            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              >
+                <Dialog.Panel className="relative transform overflow-hidden rounded-lg
+                 bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
                 >
-                  <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
-                    <div>
-                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                        <CheckIcon className="h-6 w-6 text-green-600" aria-hidden="true" />
+                  <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                    <div className="sm:flex sm:items-start">
+                      <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center 
+                    justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <ExclamationTriangleIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
                       </div>
-                      <div className="mt-3 text-center sm:mt-5">
+                      <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                         <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
-                          Adicionar Agendamento
+                          Delete Event
                         </Dialog.Title>
-                        <form action="submit" onSubmit={handleSubmit} className="mt-5">
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 text-left">
-                                Serviços<span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                name="service"
-                                className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                value={newEvent.service}
-                                onChange={handleChange}
-                                required
-                              >
-                                <option value="">Selecione o serviço</option>
-                                <option value="nutri">Nutri</option>
-                                <option value="consulta">Consulta</option>
-                                <option value="pericia">Pericia</option>
-                              </select>
-                            </div>
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-500">
+                            Are you sure you want to delete this event?
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <button type="button" className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm 
+                    font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto" onClick={handleDelete}>
+                      Delete
+                    </button>
+                    <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 
+                    shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                      onClick={handleCloseModal}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition.Root>
+      <Transition.Root show={showModal} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={setShowModal}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          </Transition.Child>
 
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 text-left">
-                                Profissionais<span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                name="professionalId"
-                                className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                value={newEvent.professionalId}
-                                onChange={handleChange}
-                                required
-                              >
-                                <option value="">Selecione o profissional</option>
-                                {professionals.filter(p => p.id !== 'all').map((professional) => (
-                                  <option key={professional.id} value={professional.id}>
-                                    {professional.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 text-left">
-                                  Data<span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="date"
-                                  name="start"
-                                  className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                  value={newEvent.start.toString().split('T')[0]}
-                                  onChange={handleChange}
-                                  required
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 text-left">
-                                  Hora<span className="text-red-500">*</span>
-                                </label>
-                                <select
-                                  name="time"
-                                  className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                  value={newEvent.time}
-                                  onChange={handleChange}
-                                  required
-                                >
-                                  <option value="">Selecione a hora</option>
-                                  <option value="09:00">09:00</option>
-                                  <option value="10:00">10:00</option>
-                                  <option value="11:00">11:00</option>
-                                  <option value="14:00">14:00</option>
-                                  <option value="15:00">15:00</option>
-                                  <option value="16:00">16:00</option>
-                                </select>
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 text-left">
-                                Localização
-                              </label>
-                              <select
-                                name="location"
-                                className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                value={newEvent.location}
-                                onChange={handleChange}
-                              >
-                                <option value="">Selecione o local</option>
-                                <option value="sala1">Clínica Dr. Fábio Pizzini</option>
-                              </select>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <label className="block text-sm font-medium text-gray-700">
-                                Clientes
-                              </label>
-                              <button
-                                type="button"
-                                className="inline-flex items-center px-3 py-1 text-sm font-semibold text-violet-600 hover:text-violet-500"
-                              >
-                                Adicionar Cliente
-                              </button>
-                            </div>
+          <div className="fixed inset-0 z-10 overflow-y-auto">
+            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              >
+                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                  <div>
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                      <CheckIcon className="h-6 w-6 text-green-600" aria-hidden="true" />
+                    </div>
+                    <div className="mt-3 text-center sm:mt-5">
+                      <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
+                        Adicionar Agendamento
+                      </Dialog.Title>
+                      <form action="submit" onSubmit={handleSubmit} className="mt-5">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 text-left">
+                              Serviços<span className="text-red-500">*</span>
+                            </label>
                             <select
-                              name="client"
+                              name="service"
                               className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                              value={newEvent.client}
+                              value={newEvent.service}
                               onChange={handleChange}
+                              required
                             >
-                              <option value="">Selecione o cliente</option>
-                              <option value="cliente1">Cliente 1</option>
-                              <option value="cliente2">Barnao</option>
+                              <option value="">Selecione o serviço</option>
+                              <option value="nutri">Nutri</option>
+                              <option value="consulta">Consulta</option>
+                              <option value="pericia">Pericia</option>
                             </select>
+                          </div>
 
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 text-left">
+                              Profissionais<span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              name="professionalId"
+                              className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
+                              value={newEvent.professionalId}
+                              onChange={handleChange}
+                              required
+                            >
+                              <option value="">Selecione o profissional</option>
+                              {professionals.filter(p => p.id !== 'all').map((professional) => (
+                                <option key={professional.id} value={professional.id}>
+                                  {professional.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 text-left">
-                                Nota
+                                Data<span className="text-red-500">*</span>
                               </label>
-                              <textarea
-                                name="notes"
-                                rows={3}
-                                className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                placeholder="As notas não são visíveis para o paciente"
-                                value={newEvent.notes}
+                              <input
+                                type="date"
+                                name="start"
+                                className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
+                                value={newEvent.start.toString().split('T')[0]}
                                 onChange={handleChange}
+                                required
                               />
                             </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 text-left">
+                                Hora<span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                name="time"
+                                className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
+                                value={newEvent.time}
+                                onChange={handleChange}
+                                required
+                              >
+                                <option value="">Selecione a hora</option>
+                                <option value="09:00">09:00</option>
+                                <option value="10:00">10:00</option>
+                                <option value="11:00">11:00</option>
+                                <option value="14:00">14:00</option>
+                                <option value="15:00">15:00</option>
+                                <option value="16:00">16:00</option>
+                              </select>
+                            </div>
                           </div>
 
-                          <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                            <button
-                              type="submit"
-                              className="inline-flex w-full justify-center rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 sm:col-start-2 disabled:opacity-25"
-                              disabled={!newEvent.service || !newEvent.professionalId || !newEvent.start || !newEvent.time}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 text-left">
+                              Localização
+                            </label>
+                            <select
+                              name="location"
+                              className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
+                              value={newEvent.location}
+                              onChange={handleChange}
                             >
-                              Adicionar Agendamento
-                            </button>
+                              <option value="">Selecione o local</option>
+                              <option value="sala1">Clínica Dr. Fábio Pizzini</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Clientes
+                            </label>
                             <button
                               type="button"
-                              className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
-                              onClick={handleCloseModal}
+                              onClick={() => setShowAddClientModal(true)}
+                              className="inline-flex items-center px-3 py-1 text-sm font-semibold text-violet-600 hover:text-violet-500"
                             >
-                              Cancelar
+                              Adicionar Cliente
                             </button>
                           </div>
-                        </form>
-                      </div>
+                          <select
+                            name="client"
+                            className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
+                            value={newEvent.client}
+                            onChange={handleChange}
+                          >
+                            <option value="">Selecione o cliente</option>
+                            {clients.map((client) => (
+                              <option key={client.id} value={client.id}>
+                                {`${client.firstName} ${client.lastName}`}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 text-left">
+                              Nota
+                            </label>
+                            <textarea
+                              name="notes"
+                              rows={3}
+                              className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
+                              placeholder="As notas não são visíveis para o paciente"
+                              value={newEvent.notes}
+                              onChange={handleChange}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                          <button
+                            type="submit"
+                            className="inline-flex w-full justify-center rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 sm:col-start-2 disabled:opacity-25"
+                            disabled={!newEvent.service || !newEvent.professionalId || !newEvent.start || !newEvent.time}
+                          >
+                            Adicionar Agendamento
+                          </button>
+                          <button
+                            type="button"
+                            className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                            onClick={handleCloseModal}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </form>
                     </div>
-                  </Dialog.Panel>
-                </Transition.Child>
-              </div>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
             </div>
-          </Dialog>
-        </Transition.Root>
-      </main >
-    </>
+          </div>
+        </Dialog>
+      </Transition.Root>
+
+      <AddClientForm
+        isOpen={showAddClientModal}
+        onClose={() => setShowAddClientModal(false)}
+        onSubmit={handleAddClient}
+      />
+    </div>
   )
 }
