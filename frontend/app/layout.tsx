@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'HelloDoc',
   description: 'Sistema de agendamento médico',
   icons: {
-    icon: '/logohello.svg'
+    icon: '/favicon.svg'
   }
 }
 
@@ -21,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
-        <link rel="icon" type="image/svg+xml" href="/logohello.svg" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
       <body className={inter.className}>
         <Navbar />
