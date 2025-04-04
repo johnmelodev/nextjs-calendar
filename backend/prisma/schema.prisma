@@ -35,13 +35,30 @@ model Patient {
   isActive        Boolean   @default(true)
 }
 
+model Location {
+  id          String    @id @default(uuid())
+  name        String
+  description String?   // Campo opcional de descrição
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  phone       String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workingHours Json?    // Armazenará os horários de funcionamento em formato JSON
+  professionals Professional[] // Relacionamento com profissionais
+}
+
 model Professional {
   id              String    @id @default(uuid())
   firstName       String
   lastName        String
   email           String    @unique
   phone           String
-  location        String?
+  locationId      String?   // Chave estrangeira para Location
+  location        Location? @relation(fields: [locationId], references: [id])
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   isActive        Boolean   @default(true)
