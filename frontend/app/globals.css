@@ -1,0 +1,315 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50;
+  }
+
+  input[type="text"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="time"],
+  textarea {
+    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm;
+  }
+
+  select {
+    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm;
+  }
+}
+
+@layer components {
+  .toggle-checkbox:checked {
+    @apply right-0 border-primary-600;
+    right: 0;
+    border-color: #7C3AED;
+  }
+  
+  .toggle-checkbox:checked + .toggle-label {
+    @apply bg-primary-600;
+    background-color: #7C3AED;
+  }
+
+  .btn-primary {
+    @apply inline-flex justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply inline-flex justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700;
+  }
+
+  .form-input {
+    @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm;
+  }
+
+  .form-error {
+    @apply mt-2 text-sm text-red-600;
+  }
+
+  .card {
+    @apply bg-white shadow rounded-lg;
+  }
+
+  .card-header {
+    @apply px-4 py-5 border-b border-gray-200 sm:px-6;
+  }
+
+  .card-body {
+    @apply px-4 py-5 sm:p-6;
+  }
+
+  .table-header {
+    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+  }
+
+  .table-cell {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+  }
+
+  .table-row {
+    @apply hover:bg-gray-50;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+
+input {
+  @apply px-2;
+}
+
+.fc-header-toolbar {
+  display: inline-block;
+  padding: 4px 4px;
+  
+  @apply space-x-8;
+}
+
+.fc-day {
+  @apply m-8;
+}
+
+.fc-scrollgrid-sync-table {
+  @apply w-full;
+}
+
+.fc-view {
+  @apply w-full h-full lg:h-3/4 xl:h-2/3 bg-white;
+}
+
+.fc-h-event {
+  @apply bg-violet-500 border border-violet-600 ;
+  
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  @apply bg-violet-100 ;
+}
+
+.fc .fc-button{
+  @apply bg-violet-800 hover:bg-violet-900  ;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+  @apply bg-violet-600;
+}
+
+.fc .fc-button-primary:disabled {
+  @apply bg-violet-600;
+}
+.fc-v-event {
+  @apply bg-violet-500 border border-violet-600 ;
+  
+}
+
+.fc-custom-style .fc {
+  font-family: inherit;
+}
+
+.fc-custom-style .fc-day-today {
+  background-color: transparent !important;
+}
+
+.fc-custom-style .fc-col-header-cell {
+  padding: 12px 0;
+  background-color: #F8FAFC;
+}
+
+.fc-custom-style .fc-col-header-cell-cushion {
+  color: #64748B;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+  padding: 4px 8px;
+}
+
+.fc-custom-style .fc-daygrid-day-number {
+  color: #1E293B;
+  font-size: 0.875rem;
+  padding: 8px;
+}
+
+.fc-custom-style .fc-daygrid-day-frame {
+  padding: 4px;
+}
+
+.fc-custom-style .fc-day-other .fc-daygrid-day-number {
+  color: #94A3B8;
+}
+
+.fc-custom-style .fc-event {
+  border: none;
+  background: none;
+  margin: 1px 0;
+}
+
+.fc-custom-style .fc-h-event {
+  background: none;
+  border: none;
+}
+
+.fc-custom-style .fc-daygrid-event-harness {
+  margin: 1px 4px;
+}
+
+.fc-custom-style .fc-day-today .fc-daygrid-day-number {
+  background-color: #7C3AED;
+  color: white;
+  border-radius: 9999px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fc-custom-style .fc-day-today .fc-daygrid-day-frame {
+  background-color: #F5F3FF;
+}
+
+.fc-custom-style .fc-scrollgrid {
+  border: none !important;
+}
+
+.fc-custom-style .fc-scrollgrid td {
+  border-right: none !important;
+}
+
+.fc-custom-style .fc-scrollgrid-section > td {
+  border: none;
+}
+
+.fc-custom-style .fc-scrollgrid-section > th {
+  border: none;
+}
+
+.fc-custom-style .fc-scrollgrid-section-header > th {
+  border-right: none !important;
+}
+
+.fc-custom-style .fc-col-header {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+/* Estilos para visualização semanal */
+.fc-custom-style .fc-timegrid-slot {
+  height: 40px !important;
+}
+
+.fc-custom-style .fc-timegrid-axis {
+  padding: 8px;
+}
+
+.fc-custom-style .fc-timegrid-slot-label {
+  font-size: 0.75rem;
+  color: #64748B;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.fc-custom-style .fc-timegrid-axis-cushion {
+  padding: 4px;
+}
+
+.fc-custom-style .fc-timegrid-slots td {
+  border-top: 1px solid #E2E8F0 !important;
+}
+
+.fc-custom-style .fc-timegrid-divider {
+  display: none;
+}
+
+.fc-custom-style .fc-timegrid-col.fc-day-today {
+  background-color: #F5F3FF !important;
+}
+
+.fc-custom-style .fc-timegrid-now-indicator-line {
+  border-color: #7C3AED;
+}
+
+.fc-custom-style .fc-timegrid-now-indicator-arrow {
+  border-color: #7C3AED;
+  color: #7C3AED;
+}
+
+.fc-custom-style .fc-timegrid-event {
+  border-radius: 4px;
+  margin: 1px 4px;
+}
+
+.fc-custom-style .fc-timegrid-event .fc-event-main {
+  padding: 4px 6px;
+}
+
+.fc-custom-style .fc-timegrid-header {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.fc-custom-style .fc-timegrid-cols {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fc-custom-style .fc-timegrid {
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: white;
+}
+
+/* Ajustes para o cabeçalho da semana */
+.fc-custom-style .fc-timeGridWeek-view .fc-col-header-cell {
+  padding: 16px 8px;
+  text-align: left;
+}
+
+.fc-custom-style .fc-timeGridWeek-view .fc-col-header-cell-cushion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.fc-custom-style .fc-timeGridWeek-view .fc-col-header-cell-cushion::before {
+  content: attr(data-weekday);
+  font-size: 0.75rem;
+  color: #94A3B8;
+  font-weight: normal;
+  text-transform: uppercase;
+}
