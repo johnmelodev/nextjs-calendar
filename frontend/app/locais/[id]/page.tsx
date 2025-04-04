@@ -5,6 +5,8 @@ import { useLocationStore } from '../../stores/locationStore';
 import LocationForm from '../../components/LocationForm';
 import WorkingHoursForm from '../../components/WorkingHoursForm';
 import Link from 'next/link';
+import { IoInformationCircleOutline } from "react-icons/io5";
+import { BiTime } from "react-icons/bi";
 
 interface Location {
   id: string;
@@ -27,32 +29,10 @@ interface Location {
   zipCode: string;
 }
 
-interface TabProps {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-function Tab({ label, isActive, onClick }: TabProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium ${
-        isActive
-          ? 'text-indigo-600 border-b-2 border-indigo-600'
-          : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 export default function LocationDetailsPage({ params }: { params: { id: string } }) {
   const [activeTab, setActiveTab] = useState<'info' | 'hours'>('info');
-  const { locations, loading, error, fetchLocations, updateLocation } = useLocationStore();
+  const { locations, loading, error, fetchLocations } = useLocationStore();
   const [location, setLocation] = useState<Location | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchLocations();
@@ -67,19 +47,6 @@ export default function LocationDetailsPage({ params }: { params: { id: string }
     }
   }, [locations, params.id]);
 
-  const handleSave = async (data: Partial<Location>) => {
-    setIsSaving(true);
-    try {
-      await updateLocation(params.id, data);
-      // Atualiza os dados locais após salvar
-      fetchLocations();
-    } catch (error) {
-      console.error('Erro ao salvar:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Carregando...</div>;
   }
@@ -93,45 +60,77 @@ export default function LocationDetailsPage({ params }: { params: { id: string }
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <Link href="/locais" className="hover:text-gray-700">
+    <div className="min-h-screen bg-[#F8F9FE]">
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="flex items-center space-x-2 text-sm mb-6">
+          <Link href="/locais" className="text-gray-500 hover:text-gray-700">
             Locais
           </Link>
-          <span>{'>'}</span>
+          <span className="text-gray-500">{'>'}</span>
           <span className="text-gray-900">{location.name}</span>
         </div>
-      </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-4" aria-label="Tabs">
-            <Tab
-              label="Informações"
-              isActive={activeTab === 'info'}
-              onClick={() => setActiveTab('info')}
-            />
-            <Tab
-              label="Horário de Atendimento"
-              isActive={activeTab === 'hours'}
-              onClick={() => setActiveTab('hours')}
-            />
-          </nav>
-        </div>
+        <div className="flex gap-6">
+          {/* Sidebar */}
+          <div className="w-64 bg-white rounded-lg shadow-sm p-4">
+            <nav className="space-y-1">
+              <button
+                onClick={() => setActiveTab('info')}
+                className={`flex items-center w-full px-4 py-2 text-sm rounded-lg ${
+                  activeTab === 'info'
+                    ? 'bg-violet-50 text-violet-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <IoInformationCircleOutline className="mr-3 h-5 w-5" />
+                Informações
+              </button>
+              <button
+                onClick={() => setActiveTab('hours')}
+                className={`flex items-center w-full px-4 py-2 text-sm rounded-lg ${
+                  activeTab === 'hours'
+                    ? 'bg-violet-50 text-violet-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <BiTime className="mr-3 h-5 w-5" />
+                Horário de Atendimento
+              </button>
+            </nav>
+          </div>
 
-        <div className="p-6">
-          {activeTab === 'info' ? (
-            <LocationForm
-              initialData={location}
-              onSuccess={() => fetchLocations()}
-            />
-          ) : (
-            <WorkingHoursForm
-              initialData={location.workingHours}
-              onChange={(workingHours) => handleSave({ workingHours })}
-            />
-          )}
+          {/* Main Content */}
+          <div className="flex-1">
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-xl font-semibold text-gray-900">
+                    {activeTab === 'info' ? 'Informações' : 'Horário de Trabalho'}
+                  </h1>
+                  <button
+                    type="button"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
+                  >
+                    Salvar
+                  </button>
+                </div>
+
+                {activeTab === 'info' ? (
+                  <LocationForm
+                    initialData={location}
+                    onSuccess={() => fetchLocations()}
+                  />
+                ) : (
+                  <WorkingHoursForm
+                    initialData={location.workingHours}
+                    onChange={(workingHours) => {
+                      // Implementar atualização dos horários
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,51 +1,45 @@
 import { useState } from 'react';
+import { Switch } from '@headlessui/react';
+import { BiPencil, BiTrash } from 'react-icons/bi';
+
+interface Period {
+  start: string;
+  end: string;
+}
+
+interface DaySchedule {
+  isOpen: boolean;
+  periods: Period[];
+}
 
 interface WorkingHours {
-  [key: string]: {
-    isOpen: boolean;
-    periods: Array<{
-      start: string;
-      end: string;
-    }>;
-  };
+  [key: string]: DaySchedule;
 }
 
 interface WorkingHoursFormProps {
-  initialData?: WorkingHours;
+  initialData: WorkingHours;
   onChange: (workingHours: WorkingHours) => void;
 }
 
 const daysOfWeek = [
-  { id: 'monday', label: 'Segunda-Feira' },
-  { id: 'tuesday', label: 'Terça-Feira' },
-  { id: 'wednesday', label: 'Quarta-Feira' },
-  { id: 'thursday', label: 'Quinta-Feira' },
-  { id: 'friday', label: 'Sexta-Feira' },
-  { id: 'saturday', label: 'Sábado' },
-  { id: 'sunday', label: 'Domingo' },
+  { key: 'monday', label: 'Segunda-Feira' },
+  { key: 'tuesday', label: 'Terça-Feira' },
+  { key: 'wednesday', label: 'Quarta-Feira' },
+  { key: 'thursday', label: 'Quinta-Feira' },
+  { key: 'friday', label: 'Sexta-Feira' },
+  { key: 'saturday', label: 'Sábado' },
+  { key: 'sunday', label: 'Domingo' },
 ];
 
-const defaultPeriod = { start: '09:00', end: '18:00' };
-
 export default function WorkingHoursForm({ initialData, onChange }: WorkingHoursFormProps) {
-  const [workingHours, setWorkingHours] = useState<WorkingHours>(
-    initialData || {
-      monday: { isOpen: true, periods: [defaultPeriod] },
-      tuesday: { isOpen: true, periods: [defaultPeriod] },
-      wednesday: { isOpen: true, periods: [defaultPeriod] },
-      thursday: { isOpen: true, periods: [defaultPeriod] },
-      friday: { isOpen: true, periods: [defaultPeriod] },
-      saturday: { isOpen: false, periods: [] },
-      sunday: { isOpen: false, periods: [] },
-    }
-  );
+  const [workingHours, setWorkingHours] = useState<WorkingHours>(initialData);
 
   const handleDayToggle = (day: string) => {
     const updatedHours = {
       ...workingHours,
       [day]: {
+        ...workingHours[day],
         isOpen: !workingHours[day].isOpen,
-        periods: workingHours[day].isOpen ? [] : [defaultPeriod],
       },
     };
     setWorkingHours(updatedHours);
@@ -71,7 +65,7 @@ export default function WorkingHoursForm({ initialData, onChange }: WorkingHours
       ...workingHours,
       [day]: {
         ...workingHours[day],
-        periods: [...workingHours[day].periods, defaultPeriod],
+        periods: [...workingHours[day].periods, { start: '09:00', end: '18:00' }],
       },
     };
     setWorkingHours(updatedHours);
@@ -91,69 +85,88 @@ export default function WorkingHoursForm({ initialData, onChange }: WorkingHours
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium text-gray-900">HORÁRIO DE TRABALHO</h3>
-      {daysOfWeek.map(({ id, label }) => (
-        <div key={id} className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-700">{label}</span>
+    <div className="space-y-6">      
+      <div className="space-y-4">
+        {daysOfWeek.map(({ key, label }) => (
+          <div key={key} className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Switch
+                  checked={workingHours[key].isOpen}
+                  onChange={() => handleDayToggle(key)}
+                  className={`${
+                    workingHours[key].isOpen ? 'bg-violet-600' : 'bg-gray-200'
+                  } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2`}
+                >
+                  <span
+                    className={`${
+                      workingHours[key].isOpen ? 'translate-x-6' : 'translate-x-1'
+                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                  />
+                </Switch>
+                <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+              </div>
             </div>
-            <div className="relative inline-block w-10 mr-2 align-middle select-none">
-              <input
-                type="checkbox"
-                checked={workingHours[id].isOpen}
-                onChange={() => handleDayToggle(id)}
-                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-              />
-              <label className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-            </div>
-          </div>
 
-          {workingHours[id].isOpen && (
-            <div className="pl-4 space-y-4">
-              {workingHours[id].periods.map((period, index) => (
-                <div key={index} className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">Iniciar</span>
-                    <input
-                      type="time"
-                      value={period.start}
-                      onChange={(e) => handlePeriodChange(id, index, 'start', e.target.value)}
-                      className="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
+            {workingHours[key].isOpen && (
+              <div className="space-y-3">
+                {workingHours[key].periods.map((period, index) => (
+                  <div key={index} className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex flex-col">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Iniciar
+                        </label>
+                        <input
+                          type="time"
+                          value={period.start}
+                          onChange={(e) => handlePeriodChange(key, index, 'start', e.target.value)}
+                          className="block w-32 rounded-lg border-gray-200 text-sm focus:border-violet-500 focus:ring-violet-500"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Concluir
+                        </label>
+                        <input
+                          type="time"
+                          value={period.end}
+                          onChange={(e) => handlePeriodChange(key, index, 'end', e.target.value)}
+                          className="block w-32 rounded-lg border-gray-200 text-sm focus:border-violet-500 focus:ring-violet-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end space-x-2 pb-1">
+                      <button
+                        type="button"
+                        onClick={() => removePeriod(key, index)}
+                        className="p-1.5 text-gray-500 hover:text-gray-700"
+                      >
+                        <BiTrash className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="p-1.5 text-gray-500 hover:text-gray-700"
+                      >
+                        <BiPencil className="h-5 w-5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">Concluir</span>
-                    <input
-                      type="time"
-                      value={period.end}
-                      onChange={(e) => handlePeriodChange(id, index, 'end', e.target.value)}
-                      className="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
+                ))}
+                <div className="pt-2">
                   <button
                     type="button"
-                    onClick={() => removePeriod(id, index)}
-                    className="text-red-600 hover:text-red-800"
+                    onClick={() => addPeriod(key)}
+                    className="text-sm text-violet-600 hover:text-violet-700 font-medium"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
+                    + Aplicar para outros dias
                   </button>
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => addPeriod(id)}
-                className="text-indigo-600 hover:text-indigo-800 text-sm"
-              >
-                + Adicionar horário
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 } 
