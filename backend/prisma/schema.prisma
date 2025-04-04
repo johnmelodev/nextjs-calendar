@@ -46,3 +46,18 @@ model Professional {
   updatedAt       DateTime  @updatedAt
   isActive        Boolean   @default(true)
 }
+
+model Location {
+  id            String   @id @default(uuid())
+  name          String
+  address       String
+  phone         String
+  description   String?
+  workingHours  Json     // Armazenaremos os horários como JSON
+  isActive      Boolean  @default(true)
+  city          String
+  state         String
+  zipCode       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

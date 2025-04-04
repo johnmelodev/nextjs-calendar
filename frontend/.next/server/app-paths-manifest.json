@@ -1,10 +1,4 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
-  "/agendamentos/page": "app/agendamentos/page.js",
-  "/profissionais/page": "app/profissionais/page.js",
-  "/locais/page": "app/locais/page.js",
-  "/pacientes/page": "app/pacientes/page.js",
-  "/servicos/page": "app/servicos/page.js",
-  "/locais/[id]/page": "app/locais/[id]/page.js"
+  "/locais/page": "app/locais/page.js"
 }

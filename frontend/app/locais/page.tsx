@@ -1,128 +1,123 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, DotsThree, PencilSimple, Power, Trash } from '@phosphor-icons/react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useLocationStore } from '../stores/locationStore';
+import Link from 'next/link';
 
-// Mock data inicial
-const initialLocations = [
-  {
-    id: 1,
-    name: 'Clínica Dr. Fábio Pizzini',
-    address: 'Av. Comendador Pereira Inácio, 950 - Jardim Vergueiro, Sorocaba - SP, 18030-005, Brasil',
-    phone: '15998719454',
-    initials: 'CD',
-    color: '#10b981',
-    workingHours: {
-      monday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-      tuesday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-      wednesday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-      thursday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-      friday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-      saturday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-      sunday: { isOpen: false, periods: [] }
-    }
-  }
-];
-
-export default function LocaisPage() {
-  const [locations, setLocations] = useState(initialLocations);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const router = useRouter();
-
-  const handleDeleteLocation = (id: number) => {
-    setLocations(locations.filter(location => location.id !== id));
+interface Location {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  description?: string;
+  workingHours: {
+    [key: string]: {
+      isOpen: boolean;
+      periods: Array<{
+        start: string;
+        end: string;
+      }>;
+    };
   };
+  isActive: boolean;
+  city: string;
+  state: string;
+  zipCode: string;
+}
+
+export default function LocationsPage() {
+  const { locations, loading, error, fetchLocations } = useLocationStore();
+
+  useEffect(() => {
+    fetchLocations();
+  }, [fetchLocations]);
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Carregando...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500 text-center p-4">{error}</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="px-8 py-6">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl text-gray-700 font-medium">Locais</h1>
-          </div>
-          <button
-            onClick={() => router.push('/locais/novo')}
-            className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
-          >
-            <PlusCircle className="h-5 w-5" weight="fill" />
-            Adicionar Local
-          </button>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900">Locais</h1>
+        <Link
+          href="/locais/novo"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Adicionar Local
+        </Link>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow-sm">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Nome</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Endereço</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Telefone</th>
-                <th className="w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {locations.map((location) => (
-                <tr 
-                  key={location.id} 
-                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white"
-                        style={{ backgroundColor: location.color }}
-                      >
-                        {location.initials}
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead>
+            <tr>
+              <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Nome
+              </th>
+              <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Endereço
+              </th>
+              <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Telefone
+              </th>
+              <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ações
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {locations.map((location) => (
+              <tr key={location.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 flex-shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <span className="text-indigo-600 font-medium text-sm">
+                          {location.name.substring(0, 2).toUpperCase()}
+                        </span>
                       </div>
-                      <span className="text-sm text-gray-900">{location.name}</span>
                     </div>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{location.address}</td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{location.phone}</td>
-                  <td className="py-3 px-4 relative">
-                    <button
-                      onClick={() => setOpenMenuId(openMenuId === location.id ? null : location.id)}
-                      className="p-2 hover:bg-gray-100 rounded-full"
-                    >
-                      <DotsThree className="w-5 h-5 text-gray-400" weight="bold" />
-                    </button>
-                    
-                    {openMenuId === location.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 py-1 z-50">
-                        <button
-                          onClick={() => {
-                            router.push(`/locais/${location.id}`);
-                            setOpenMenuId(null);
-                          }}
-                          className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <PencilSimple className="w-4 h-4" />
-                          Editar local
-                        </button>
-                        <button
-                          className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Power className="w-4 h-4" />
-                          Desativar local
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleDeleteLocation(location.id);
-                            setOpenMenuId(null);
-                          }}
-                          className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Trash className="w-4 h-4" />
-                          Excluir local
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">{location.name}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-900">{location.address}</div>
+                  <div className="text-sm text-gray-500">
+                    {location.city} - {location.state}, {location.zipCode}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-900">{location.phone}</div>
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-medium">
+                  <Link
+                    href={`/locais/${location.id}`}
+                    className="text-indigo-600 hover:text-indigo-900 mr-4"
+                  >
+                    Editar
+                  </Link>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Tem certeza que deseja excluir este local?')) {
+                        // Implementar exclusão
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Excluir
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
