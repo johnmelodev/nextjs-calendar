@@ -308,163 +308,165 @@ export default function ServicosPage() {
     : services;
 
   if (loading) {
-    return <div className="p-6">Carregando...</div>;
+    return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Carregando...</div>;
   }
 
   if (error) {
-    return <div className="p-6 text-red-600">Erro: {error}</div>;
+    return <div className="min-h-screen bg-gray-100 p-6 text-red-600">Erro: {error}</div>;
   }
 
   return (
-    <div className="p-6 bg-gray-100">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-medium text-gray-900">Serviços</h1>
-        <button
-          onClick={() => setShowAddService(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
-        >
-          <PlusCircle className="h-5 w-5" weight="fill" />
-          Adicionar Serviço
-        </button>
-      </div>
-
-      <div className="grid grid-cols-[280px,1fr] gap-6">
-        <div className="bg-gray-50 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-medium text-gray-700">Categorias ({categories.length})</h2>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg ${
-                !selectedCategory ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Todos os serviços
-            </button>
-
-            {categories.map(category => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg ${
-                  selectedCategory === category.id ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <span>{category.name}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteCategory(category.id);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <Trash size={16} />
-                </button>
-              </button>
-            ))}
-
-            <button
-              onClick={() => setShowAddCategory(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-            >
-              <PlusCircle size={16} />
-              Adicionar Categoria
-            </button>
-          </div>
+    <div className="min-h-screen bg-gray-100">
+      <div className="px-8 py-6">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl text-gray-700 font-medium">Serviços</h1>
+          <button
+            onClick={() => setShowAddService(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
+          >
+            <PlusCircle className="h-5 w-5" weight="fill" />
+            Adicionar Serviço
+          </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
-          <div className="p-6">
+        <div className="grid grid-cols-[280px,1fr] gap-6">
+          <div className="bg-gray-50 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-medium text-gray-700">
-                Todos os serviços ({filteredServices.length})
-              </h2>
+              <h2 className="text-sm font-medium text-gray-700">Categorias ({categories.length})</h2>
             </div>
 
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-sm font-medium text-gray-500">
-                  <th className="pb-4">Nome</th>
-                  <th className="pb-4">Duração</th>
-                  <th className="pb-4">Preço</th>
-                  <th className="pb-4">Funcionários</th>
-                  <th className="pb-4"></th>
-                </tr>
-              </thead>
-              <tbody className="text-sm text-gray-700">
-                {filteredServices.map(service => (
-                  <tr key={service.id} className="border-t border-gray-200">
-                    <td className="py-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                          style={{ backgroundColor: service.color }}
-                        >
-                          {service.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        {service.name}
-                      </div>
-                    </td>
-                    <td className="py-4">{service.duration}min</td>
-                    <td className="py-4">R$ {typeof service.price === 'number' ? service.price.toFixed(2) : parseFloat(service.price).toFixed(2)}</td>
-                    <td className="py-4">
-                      <div className="flex -space-x-2">
-                        {/* TODO: Implementar avatares dos profissionais */}
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingService(service);
-                            setShowAddService(true);
-                          }}
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                        >
-                          <PencilSimple size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteService(service.id)}
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                        >
-                          <Trash size={16} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="space-y-2">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg ${
+                  !selectedCategory ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Todos os serviços
+              </button>
+
+              {categories.map(category => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg ${
+                    selectedCategory === category.id ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span>{category.name}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCategory(category.id);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <Trash size={16} />
+                  </button>
+                </button>
+              ))}
+
+              <button
+                onClick={() => setShowAddCategory(true)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
+              >
+                <PlusCircle size={16} />
+                Adicionar Categoria
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-sm font-medium text-gray-700">
+                  Todos os serviços ({filteredServices.length})
+                </h2>
+              </div>
+
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-sm font-medium text-gray-500">
+                    <th className="pb-4">Nome</th>
+                    <th className="pb-4">Duração</th>
+                    <th className="pb-4">Preço</th>
+                    <th className="pb-4">Funcionários</th>
+                    <th className="pb-4"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="text-sm text-gray-700">
+                  {filteredServices.map(service => (
+                    <tr key={service.id} className="border-t border-gray-200">
+                      <td className="py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                            style={{ backgroundColor: service.color }}
+                          >
+                            {service.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          {service.name}
+                        </div>
+                      </td>
+                      <td className="py-4">{service.duration}min</td>
+                      <td className="py-4">R$ {typeof service.price === 'number' ? service.price.toFixed(2) : parseFloat(service.price).toFixed(2)}</td>
+                      <td className="py-4">
+                        <div className="flex -space-x-2">
+                          {/* TODO: Implementar avatares dos profissionais */}
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingService(service);
+                              setShowAddService(true);
+                            }}
+                            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                          >
+                            <PencilSimple size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteService(service.id)}
+                            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                          >
+                            <Trash size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+
+        {showAddCategory && (
+          <AddCategoryModal
+            onClose={() => {
+              setShowAddCategory(false);
+              setEditingCategory(null);
+            }}
+            onAdd={handleAddCategory}
+            initialValue={editingCategory?.name}
+            isEditing={!!editingCategory}
+          />
+        )}
+
+        {showAddService && (
+          <AddServiceModal
+            onClose={() => {
+              setShowAddService(false);
+              setEditingService(null);
+            }}
+            onAdd={editingService ? (data) => handleEditService(editingService.id, data) : handleAddService}
+            categories={categories}
+            initialValues={editingService}
+            isEditing={!!editingService}
+          />
+        )}
       </div>
-
-      {showAddCategory && (
-        <AddCategoryModal
-          onClose={() => {
-            setShowAddCategory(false);
-            setEditingCategory(null);
-          }}
-          onAdd={handleAddCategory}
-          initialValue={editingCategory?.name}
-          isEditing={!!editingCategory}
-        />
-      )}
-
-      {showAddService && (
-        <AddServiceModal
-          onClose={() => {
-            setShowAddService(false);
-            setEditingService(null);
-          }}
-          onAdd={editingService ? (data) => handleEditService(editingService.id, data) : handleAddService}
-          categories={categories}
-          initialValues={editingService}
-          isEditing={!!editingService}
-        />
-      )}
     </div>
   );
 } 
