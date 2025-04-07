@@ -13,6 +13,7 @@ export const patientCreateSchema = z.object({
     .min(11, "CPF deve ter pelo menos 11 dígitos")
     .max(14, "CPF não deve ter mais que 14 caracteres"),
   birthDate: z.string().optional(),
+  color: z.string().optional(),
 });
 
 // Schema para validação de atualização de paciente (todos os campos são opcionais)

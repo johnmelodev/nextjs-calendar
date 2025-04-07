@@ -3,6 +3,26 @@ import prisma from "../lib/prisma";
 import { PatientCreate, PatientUpdate } from "../schemas/patientSchema";
 import { ApiError } from "../utils/apiError";
 
+// Função para gerar uma cor aleatória para os pacientes
+const generateRandomColor = (): string => {
+  const colors = [
+    "#F56565", // red.500
+    "#ED8936", // orange.500
+    "#ECC94B", // yellow.500
+    "#48BB78", // green.500
+    "#38B2AC", // teal.500
+    "#4299E1", // blue.500
+    "#667EEA", // indigo.500
+    "#9F7AEA", // purple.500
+    "#ED64A6", // pink.500
+    "#805AD5", // purple.600
+    "#3182CE", // blue.600
+    "#DD6B20", // orange.600
+  ];
+
+  return colors[Math.floor(Math.random() * colors.length)];
+};
+
 export class PatientService {
   // Criar um novo paciente
   async create(data: PatientCreate): Promise<Patient> {
@@ -41,6 +61,9 @@ export class PatientService {
         }
       }
 
+      // Gerar uma cor aleatória para o paciente
+      const color = generateRandomColor();
+
       const patient = await prisma.patient.create({
         data: {
           firstName: data.firstName,
@@ -49,6 +72,7 @@ export class PatientService {
           phone: data.phone,
           cpf: data.cpf,
           birthDate,
+          color,
         },
       });
 
