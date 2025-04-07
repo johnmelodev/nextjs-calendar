@@ -293,29 +293,28 @@ export default function PacientesPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Carregando...</div>;
+    return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Carregando...</div>;
   }
 
   if (error) {
-    return <div className="min-h-screen bg-gray-50 p-6 text-red-600">Erro: {error}</div>;
+    return <div className="min-h-screen bg-gray-100 p-6 text-red-600">Erro: {error}</div>;
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">Pacientes</h1>
-        
-        <div className="mb-6 flex justify-end">
+    <div className="min-h-screen bg-gray-100">
+      <div className="px-8 py-6">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl text-gray-700 font-medium">Pacientes</h1>
           <button
             onClick={openAddModal}
-            className="bg-violet-600 text-white px-4 py-2 rounded-full flex items-center text-sm"
+            className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
           >
-            <PlusCircle className="mr-2" size={20} weight="bold" />
+            <PlusCircle className="h-5 w-5" weight="fill" />
             Adicionar Paciente
           </button>
         </div>
         
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
           <div className="flex items-center space-x-4">
             <div className="relative flex-grow max-w-md">
               <input
@@ -340,7 +339,7 @@ export default function PacientesPage() {
           </div>
         </div>
         
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100">
             <div className="grid grid-cols-5 text-sm font-medium text-gray-500">
               <div className="col-span-2 px-2">Nome</div>

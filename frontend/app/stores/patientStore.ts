@@ -49,14 +49,49 @@ interface PatientStore {
   getPatientById: (id: string) => Patient | undefined;
 }
 
+// Função para gerar uma cor aleatória
+const generateRandomColor = (id?: string): string => {
+  const colors = [
+    "#F56565", // red.500
+    "#ED8936", // orange.500
+    "#ECC94B", // yellow.500
+    "#48BB78", // green.500
+    "#38B2AC", // teal.500
+    "#4299E1", // blue.500
+    "#667EEA", // indigo.500
+    "#9F7AEA", // purple.500
+    "#ED64A6", // pink.500
+    "#805AD5", // purple.600
+    "#3182CE", // blue.600
+    "#DD6B20", // orange.600
+  ];
+
+  if (id) {
+    // Usar o ID para gerar um índice consistente
+    let sum = 0;
+    for (let i = 0; i < id.length; i++) {
+      sum += id.charCodeAt(i);
+    }
+    return colors[sum % colors.length];
+  }
+
+  // Fallback para comportamento aleatório se não tiver ID
+  return colors[Math.floor(Math.random() * colors.length)];
+};
+
 // Função para adicionar campos calculados aos pacientes
 const addCalculatedFields = (patient: Patient): Patient => {
+  const initials = `${patient.firstName.charAt(0)}${patient.lastName.charAt(
+    0
+  )}`.toUpperCase();
+
   return {
     ...patient,
     name: `${patient.firstName} ${patient.lastName}`,
-    initials: `${patient.firstName.charAt(0)}${patient.lastName.charAt(
-      0
-    )}`.toUpperCase(),
+    initials,
+    color: patient.color || generateRandomColor(patient.id),
+    appointments: patient.appointments || 0,
+    lastAppointment: patient.lastAppointment || null,
   };
 };
 
