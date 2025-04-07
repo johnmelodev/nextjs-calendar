@@ -39,7 +39,7 @@ interface PatientStore {
   error: string | null;
 
   // Ações
-  fetchPatients: (search?: string) => Promise<void>;
+  fetchPatients: (search?: string) => Promise<Patient[]>;
   createPatient: (data: PatientInput) => Promise<Patient | null>;
   updatePatient: (
     id: string,
@@ -71,19 +71,24 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   fetchPatients: async (search?: string) => {
     set({ loading: true, error: null });
     try {
-      let url = "http://localhost:3333/api/patients";
+      let url = "http://localhost:3333/patients";
       if (search) {
         url += `?search=${encodeURIComponent(search)}`;
       }
 
+      console.log("Fazendo requisição para:", url);
       const response = await axios.get<Patient[]>(url);
+      console.log("Resposta recebida:", response.data);
+
       const patientsWithCalculatedFields =
         response.data.map(addCalculatedFields);
 
       set({ patients: patientsWithCalculatedFields, loading: false });
+      return patientsWithCalculatedFields;
     } catch (error) {
       console.error("Erro ao buscar pacientes:", error);
       set({ error: "Falha ao carregar os pacientes", loading: false });
+      throw error;
     }
   },
 
@@ -92,7 +97,7 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await axios.post<Patient>(
-        "http://localhost:3333/api/patients",
+        "http://localhost:3333/patients",
         data
       );
       const newPatient = addCalculatedFields(response.data);
@@ -115,7 +120,7 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await axios.put<Patient>(
-        `http://localhost:3333/api/patients/${id}`,
+        `http://localhost:3333/patients/${id}`,
         data
       );
       const updatedPatient = addCalculatedFields(response.data);
@@ -137,7 +142,7 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   deletePatient: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      await axios.delete(`http://localhost:3333/api/patients/${id}`);
+      await axios.delete(`http://localhost:3333/patients/${id}`);
 
       set((state) => ({
         patients: state.patients.filter((p) => p.id !== id),

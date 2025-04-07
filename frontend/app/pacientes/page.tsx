@@ -1,385 +1,370 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Center,
-  Flex,
-  FormControl,
-  FormLabel,
-  Icon,
-  Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Table,
-  TableContainer,
-  Tbody,
-  Td,
-  Text,
-  Th,
-  Thead,
-  Tr,
-  useColorModeValue,
-  useDisclosure,
-  useToast,
-  VStack,
-} from "@chakra-ui/react";
-import { FaPen, FaPlus, FaSearch, FaTrash } from "react-icons/fa";
-import { useRouter } from "next/navigation";
-import InputMask from "react-input-mask";
-import { usePatientStore } from "../stores/patientStore";
+import { useState, useEffect } from 'react';
+import { PlusCircle, DotsThree, MagnifyingGlass } from '@phosphor-icons/react';
+import { usePatientStore, PatientInput } from '../stores/patientStore';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-// Componente para o Modal de adicionar paciente
-function AddPatientModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+// Componente de modal para adicionar paciente
+type AddPatientModalProps = {
+  onClose: () => void;
+  onAdd: (data: PatientInput) => void;
+};
+
+const AddPatientModal = ({ onClose, onAdd }: AddPatientModalProps) => {
+  const [formData, setFormData] = useState<PatientInput>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    cpf: '',
+    birthDate: null
+  });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  const { createPatient } = usePatientStore();
-  const toast = useToast();
 
-  const resetForm = () => {
-    setFirstName("");
-    setLastName("");
-    setEmail("");
-    setPhone("");
-    setCpf("");
-    setBirthDate("");
-    setErrors({});
-  };
-
-  const formatPhone = (value: string) => {
-    return value.replace(/\D/g, "");
-  };
-
-  const validate = () => {
+  const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
-    if (!firstName) newErrors.firstName = "Primeiro nome é obrigatório";
-    if (!lastName) newErrors.lastName = "Sobrenome é obrigatório";
-    if (!email) newErrors.email = "Email é obrigatório";
-    if (email && !/\S+@\S+\.\S+/.test(email)) newErrors.email = "Email inválido";
-    if (!phone) newErrors.phone = "Telefone é obrigatório";
-    if (!cpf) newErrors.cpf = "CPF é obrigatório";
-    
+    if (!formData.firstName) newErrors.firstName = 'Primeiro nome é obrigatório';
+    if (!formData.lastName) newErrors.lastName = 'Sobrenome é obrigatório';
+    if (!formData.email) newErrors.email = 'E-mail é obrigatório';
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'E-mail inválido';
+    }
+    if (!formData.phone) newErrors.phone = 'Telefone é obrigatório';
+    if (!formData.cpf) newErrors.cpf = 'CPF é obrigatório';
+    if (formData.cpf && formData.cpf.replace(/\D/g, '').length !== 11) {
+      newErrors.cpf = 'CPF deve ter 11 dígitos';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
-    if (!validate()) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     
-    try {
-      const data = {
-        firstName,
-        lastName,
-        email,
-        phone: formatPhone(phone),
-        cpf: cpf.replace(/\D/g, ""),
-        birthDate: birthDate || null,
-      };
-      
-      const result = await createPatient(data);
-      
-      if (result) {
-        toast({
-          title: "Paciente adicionado",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-        resetForm();
-        onClose();
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao adicionar paciente",
-        description: "Não foi possível adicionar o paciente. Tente novamente.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+    if (!validateForm()) return;
+    
+    // Formatar dados antes de enviar
+    const submissionData = {
+      ...formData,
+      phone: formData.phone.replace(/\D/g, ''),
+      cpf: formData.cpf.replace(/\D/g, '')
+    };
+    
+    onAdd(submissionData);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Função para lidar com o clique fora do modal
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Adicionar Paciente</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <VStack spacing={4}>
-            <FormControl isInvalid={!!errors.firstName}>
-              <FormLabel>Primeiro Nome</FormLabel>
-              <Input
-                placeholder="Digite o primeiro nome"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={handleOverlayClick}>
+      <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+        <h2 className="text-xl font-semibold mb-6">Adicionar paciente</h2>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Primeiro Nome<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                placeholder="Primeiro Nome"
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
               />
               {errors.firstName && (
-                <Text color="red.500" fontSize="sm">
-                  {errors.firstName}
-                </Text>
+                <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
               )}
-            </FormControl>
+            </div>
 
-            <FormControl isInvalid={!!errors.lastName}>
-              <FormLabel>Sobrenome</FormLabel>
-              <Input
-                placeholder="Digite o sobrenome"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sobrenome<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                placeholder="Sobrenome"
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
               />
               {errors.lastName && (
-                <Text color="red.500" fontSize="sm">
-                  {errors.lastName}
-                </Text>
+                <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
               )}
-            </FormControl>
+            </div>
 
-            <FormControl isInvalid={!!errors.email}>
-              <FormLabel>Email</FormLabel>
-              <Input
-                placeholder="Digite o email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data de Nascimento
+              </label>
+              <input
+                type="date"
+                name="birthDate"
+                value={formData.birthDate || ''}
+                onChange={handleChange}
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
               />
-              {errors.email && (
-                <Text color="red.500" fontSize="sm">
-                  {errors.email}
-                </Text>
-              )}
-            </FormControl>
+            </div>
 
-            <FormControl isInvalid={!!errors.phone}>
-              <FormLabel>Telefone</FormLabel>
-              <Input
-                as={InputMask}
-                mask="(99) 99999-9999"
-                placeholder="(00) 00000-0000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-              {errors.phone && (
-                <Text color="red.500" fontSize="sm">
-                  {errors.phone}
-                </Text>
-              )}
-            </FormControl>
-
-            <FormControl isInvalid={!!errors.cpf}>
-              <FormLabel>CPF</FormLabel>
-              <Input
-                as={InputMask}
-                mask="999.999.999-99"
-                placeholder="000.000.000-00"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                CPF<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="cpf"
+                value={formData.cpf}
+                onChange={handleChange}
+                placeholder="CPF"
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
               />
               {errors.cpf && (
-                <Text color="red.500" fontSize="sm">
-                  {errors.cpf}
-                </Text>
+                <p className="text-red-500 text-xs mt-1">{errors.cpf}</p>
               )}
-            </FormControl>
+            </div>
 
-            <FormControl>
-              <FormLabel>Data de Nascimento</FormLabel>
-              <Input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                E-mail<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="E-mail"
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
               />
-            </FormControl>
-          </VStack>
-        </ModalBody>
-        <ModalFooter>
-          <Button colorScheme="gray" mr={3} onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button colorScheme="blue" onClick={handleSubmit}>
-            Adicionar
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Telefone<span className="text-red-500">*</span>
+              </label>
+              <div className="flex">
+                <div className="flex items-center border-0 ring-1 ring-gray-200 rounded-l-lg px-3 bg-gray-50">
+                  <span className="flex items-center">
+                    <img src="https://flagcdn.com/w20/br.png" alt="BR" className="h-4 w-6 mr-1" />
+                    +55
+                  </span>
+                </div>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="Número de Telefone"
+                  className="flex-1 text-sm border-0 ring-1 ring-gray-200 rounded-r-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700"
+            >
+              Adicionar Paciente
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
-}
+};
 
 export default function PacientesPage() {
-  const { patients, loading, fetchPatients, deletePatient } = usePatientStore();
-  const [searchTerm, setSearchTerm] = useState("");
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const router = useRouter();
-  const toast = useToast();
-  
+  const { patients, loading, error, fetchPatients, createPatient, deletePatient } = usePatientStore();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Carregar dados ao montar o componente
   useEffect(() => {
-    fetchPatients();
+    console.log("Tentando buscar pacientes...");
+    
+    fetchPatients()
+      .then(() => console.log("Pacientes carregados com sucesso!"))
+      .catch(err => console.error("Erro ao buscar pacientes:", err));
   }, [fetchPatients]);
 
-  const handleSearch = () => {
-    fetchPatients(searchTerm);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
+  // Função para adicionar um novo paciente
+  const handleAddPatient = async (data: PatientInput) => {
+    try {
+      await createPatient(data);
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Erro ao adicionar paciente:', error);
     }
   };
 
-  const handleEdit = (id: string) => {
-    router.push(`/pacientes/${id}`);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Tem certeza que deseja remover este paciente?")) {
-      const success = await deletePatient(id);
-      
-      if (success) {
-        toast({
-          title: "Paciente removido",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      } else {
-        toast({
-          title: "Erro ao remover paciente",
-          description: "Não foi possível remover o paciente. Tente novamente.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+  // Função para excluir um paciente
+  const handleDeletePatient = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este paciente?')) {
+      try {
+        await deletePatient(id);
+      } catch (error) {
+        console.error('Erro ao excluir paciente:', error);
       }
     }
   };
 
-  const textColor = useColorModeValue("gray.700", "white");
-  const bgColor = useColorModeValue("white", "gray.800");
+  // Função para alternar o menu de ações
+  const toggleMenu = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id);
+  };
+
+  // Função para formatar a data
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    try {
+      return format(new Date(dateString), 'dd/MM/yy', { locale: ptBR });
+    } catch (e) {
+      return '';
+    }
+  };
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen bg-gray-100 p-6 text-red-600">Erro: {error}</div>;
+  }
 
   return (
-    <Box pt={{ base: "90px", md: "80px", xl: "80px" }}>
-      <Flex
-        mb="24px"
-        justifyContent="space-between"
-        align="center"
-        direction={{ base: "column", md: "row" }}
-      >
-        <Text color={textColor} fontSize="2xl" fontWeight="700" lineHeight="100%">
-          Pacientes
-        </Text>
-        <Flex align="center" gap={4}>
-          <Box
-            borderRadius="10px"
-            bg={bgColor}
-            p="8px"
-            display="flex"
-            alignItems="center"
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-800">Pacientes</h1>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-violet-600 text-white px-4 py-2 rounded-lg flex items-center text-sm hover:bg-violet-700"
           >
-            <Input
-              placeholder="Buscar paciente..."
-              fontSize="sm"
-              py="11px"
-              placeholder-color="gray.400"
-              w={{ base: "100%", md: "258px" }}
-              borderRadius="10px"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={handleKeyPress}
-            />
-            <Button
-              variant="primary"
-              ml={2}
-              p="0px"
-              h="32px"
-              w="32px"
-              onClick={handleSearch}
-            >
-              <Icon h="16px" w="16px" as={FaSearch} />
-            </Button>
-          </Box>
-          <Button
-            variant="primary"
-            leftIcon={<Icon as={FaPlus} h="16px" w="16px" />}
-            onClick={onOpen}
-          >
-            Adicionar
-          </Button>
-        </Flex>
-      </Flex>
+            <PlusCircle className="mr-2" size={20} />
+            Adicionar Paciente
+          </button>
+        </div>
 
-      {loading ? (
-        <Center mt={10}>
-          <Text>Carregando pacientes...</Text>
-        </Center>
-      ) : patients.length === 0 ? (
-        <Center mt={10}>
-          <Text>Nenhum paciente encontrado.</Text>
-        </Center>
-      ) : (
-        <TableContainer bg={bgColor} p={4} borderRadius="10px">
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Nome</Th>
-                <Th>Email</Th>
-                <Th>Telefone</Th>
-                <Th>CPF</Th>
-                <Th>Ações</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {patients.map((patient) => (
-                <Tr key={patient.id}>
-                  <Td>{patient.name}</Td>
-                  <Td>{patient.email}</Td>
-                  <Td>
-                    {patient.phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}
-                  </Td>
-                  <Td>
-                    {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
-                  </Td>
-                  <Td>
-                    <Flex gap={2}>
-                      <Button
-                        variant="primary"
-                        p="0px"
-                        h="32px"
-                        w="32px"
-                        onClick={() => handleEdit(patient.id)}
-                      >
-                        <Icon h="16px" w="16px" as={FaPen} />
-                      </Button>
-                      <Button
-                        variant="danger"
-                        p="0px"
-                        h="32px"
-                        w="32px"
-                        onClick={() => handleDelete(patient.id)}
-                      >
-                        <Icon h="16px" w="16px" as={FaTrash} />
-                      </Button>
-                    </Flex>
-                  </Td>
-                </Tr>
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="mb-6">
+            <div className="relative max-w-md">
+              <input
+                type="text"
+                placeholder="Pesquisar Paciente"
+                className="w-full px-4 py-2 pl-10 border border-gray-200 rounded-lg"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && fetchPatients(searchTerm)}
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlass size={20} className="text-gray-400" />
+              </div>
+            </div>
+          </div>
+
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Nome</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">N° de Atendimentos</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Último Atendimento</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Criado</th>
+                <th className="px-4 py-3 text-right"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {patients.map(patient => (
+                <tr key={patient.id} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="px-4 py-4">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-gray-600">
+                          {patient.initials}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {patient.firstName} {patient.lastName}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-500">
+                    {patient.appointments || 0}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-500">
+                    {patient.lastAppointment ? formatDate(patient.lastAppointment) : '-'}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-500">
+                    {formatDate(patient.createdAt)}
+                  </td>
+                  <td className="px-4 py-4 text-right relative">
+                    <button
+                      onClick={() => toggleMenu(patient.id)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <DotsThree size={24} weight="bold" />
+                    </button>
+                    
+                    {openMenuId === patient.id && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+                        <div className="py-1">
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => handleDeletePatient(patient.id)}
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                </tr>
               ))}
-            </Tbody>
-          </Table>
-        </TableContainer>
-      )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      <AddPatientModal isOpen={isOpen} onClose={onClose} />
-    </Box>
+      {showAddModal && (
+        <AddPatientModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAddPatient}
+        />
+      )}
+    </div>
   );
 } 
