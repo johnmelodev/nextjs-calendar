@@ -49,6 +49,7 @@ model Location {
   updatedAt   DateTime  @updatedAt
   workingHours Json?    // Armazenará os horários de funcionamento em formato JSON
   professionals Professional[] // Relacionamento com profissionais
+  appointments      Appointment[]
 }
 
 model Professional {
@@ -62,6 +63,11 @@ model Professional {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   isActive        Boolean   @default(true)
+  workingHours    Json?     // Armazenará os horários de trabalho em formato JSON
+  color           String?   // Cor para identificação visual no frontend
+  services        ProfessionalService[] // Relação com serviços
+  status          String    @default("disponivel") // Status do profissional (disponível/indisponível)
+  appointments      Appointment[]
 }
 
 model Category {
@@ -75,15 +81,55 @@ model Category {
 }
 
 model Service {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  duration    Int       // Duração em minutos
-  price       Decimal   @db.Decimal(10, 2)
-  color      String    // Cor para identificação visual
-  categoryId  String    // Chave estrangeira para Category
-  category    Category  @relation(fields: [categoryId], references: [id])
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  name              String
+  description       String?
+  duration          Int       // Duração em minutos
+  price             Decimal   @db.Decimal(10, 2)
+  color             String    // Cor para identificação visual
+  categoryId        String    // Chave estrangeira para Category
+  category          Category  @relation(fields: [categoryId], references: [id])
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  professionals     ProfessionalService[] // Relação com profissionais
+  appointments      Appointment[]
+}
+
+// Tabela de junção para relacionamento muitos-para-muitos entre Professional e Service
+model ProfessionalService {
+  professionalId String
+  serviceId      String
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  service        Service      @relation(fields: [serviceId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@id([professionalId, serviceId])
+  @@index([professionalId])
+  @@index([serviceId])
+}
+
+// Modelo para Agendamentos
+model Appointment {
+  id            String   @id @default(uuid())
+  clientName    String
+  clientPhone   String
+  startTime     DateTime
+  endTime       DateTime
+  notes         String?
+  status        String   @default("scheduled") // scheduled, completed, canceled, no_show
+  
+  // Relacionamentos
+  serviceId      String
+  service        Service     @relation(fields: [serviceId], references: [id])
+  
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  
+  locationId     String
+  location       Location     @relation(fields: [locationId], references: [id])
+  
+  // Campos de auditoria
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }

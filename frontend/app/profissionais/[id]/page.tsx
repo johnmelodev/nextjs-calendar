@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Info, Clock, Briefcase, PencilSimple, Trash } from '@phosphor-icons/react';
+import { Info, Clock, Briefcase, PencilSimple, Trash, ArrowLeft } from '@phosphor-icons/react';
+import { useProfessionalStore } from '../../stores/professionalStore';
+import { useLocationStore } from '../../stores/locationStore';
+import { useServiceStore } from '../../stores/serviceStore';
 
 interface Period {
   start: string;
@@ -28,67 +31,84 @@ const weekDays = [
   { id: 'sunday', label: 'Domingo' }
 ];
 
-// Mock data dos serviços
-const mockServices = {
-  consultas: [
-    { id: 1, name: 'C. Clinica Nutro (Avulsa)', duration: '40min', color: '#84cc16', initials: 'CC' },
-    { id: 2, name: 'C. Completa (Nutro+Nutri+Treino) (Avulsa) (1a Vez)', duration: '1h', color: '#ef4444', initials: 'CC' },
-    { id: 3, name: 'C. Nutri (Dieta)', duration: '40min', color: '#1e40af', initials: 'CN' },
-    { id: 4, name: 'C. Nutri+Treino (Prof. Gianolla)', duration: '40min', color: '#f59e0b', initials: 'CN' },
-    { id: 5, name: 'C. Nutro+Nutri', duration: '40min', color: '#f59e0b', initials: 'CN' },
-    { id: 6, name: 'Consulta Completa (Padrão)', duration: '40min', color: '#84cc16', initials: 'CC' },
-    { id: 7, name: 'C. Clinica Nutro (Avulsa) Cópia', duration: '40min', color: '#84cc16', initials: 'CC' }
-  ],
-  retorno: [
-    { id: 8, name: 'Plano Semestral Completo (Nutro+Nutri+Treino) - Retorno', duration: '20min', color: '#ec4899', initials: 'PS' },
-    { id: 9, name: 'R. Clinico Nutrologia (Avulsa - Dr. Pizzini)', duration: '20min', color: '#84cc16', initials: 'RC' },
-    { id: 10, name: 'R. Completo (Nutro + Nutri + Treino) (Avulsa)', duration: '20min', color: '#ef4444', initials: 'RC' },
-    { id: 11, name: 'R. Nutri (Dieta)', duration: '20min', color: '#1e40af', initials: 'RN' },
-    { id: 12, name: 'R. Nutri+Treino (Prof. Gianolla)', duration: '20min', color: '#f59e0b', initials: 'RN' },
-    { id: 13, name: 'R. Nutro+Nutri', duration: '20min', color: '#f59e0b', initials: 'RN' }
-  ],
-  planoAnual: [
-    { id: 14, name: 'Plano Anual Completo (Nutro+Nutri+Treino) - Consulta', duration: '30min', color: '#ef4444', initials: 'PA' }
-  ],
-  planoSemestral: [
-    { id: 15, name: 'Plano Semestral Completo (Nutro+Nutri+Treino) - Consulta', duration: '30min', color: '#ec4899', initials: 'PS' },
-    { id: 16, name: 'Plano Semestral Nutro - Consulta', duration: '30min', color: '#84cc16', initials: 'PS' }
-  ],
-  planoAnualSemestral: [
-    { id: 17, name: 'Plano Anual Completo (Nutro+Nutri+Treino) - Retorno', duration: '20min', color: '#ef4444', initials: 'PA' },
-    { id: 18, name: 'Plano Semestral Nutro - Retorno', duration: '20min', color: '#84cc16', initials: 'PS' }
-  ],
-  restricaoHorario: [
-    { id: 19, name: 'Restrição de Horário', duration: '1h', color: '#1e293b', initials: 'RD' }
-  ],
-  pericia: [
-    { id: 20, name: 'Perícia DPNE', duration: '1h', color: '#1e40af', initials: 'PD' },
-    { id: 21, name: 'Perícia/Vistoria - Assistente Técnico', duration: '1h', color: '#a855f7', initials: 'PV' },
-    { id: 22, name: 'classe', duration: '30min', color: '#ef4444', initials: 'C' }
-  ]
+// Horário de trabalho padrão para novos profissionais
+const defaultWorkingHours: WorkingHours = {
+  monday: { isOpen: true, periods: [{ start: '09:00', end: '18:00' }] },
+  tuesday: { isOpen: true, periods: [{ start: '09:00', end: '18:00' }] },
+  wednesday: { isOpen: true, periods: [{ start: '09:00', end: '18:00' }] },
+  thursday: { isOpen: true, periods: [{ start: '09:00', end: '18:00' }] },
+  friday: { isOpen: true, periods: [{ start: '09:00', end: '18:00' }] },
+  saturday: { isOpen: false, periods: [] },
+  sunday: { isOpen: false, periods: [] }
 };
 
 export default function ProfessionalPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const isNew = params.id === 'novo';
+  const { getProfessionalById, createProfessional, updateProfessional } = useProfessionalStore();
+  const { locations, fetchLocations } = useLocationStore();
+  const { services, fetchServices } = useServiceStore();
+  
   const [activeTab, setActiveTab] = useState<'info' | 'services' | 'hours'>('info');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
-    firstName: 'Diego',
-    lastName: 'Menezes',
-    email: 'diego@hellodoc.com.br',
+    firstName: '',
+    lastName: '',
+    email: '',
     phone: '',
-    location: ''
+    locationId: ''
   });
-  const [workingHours, setWorkingHours] = useState<WorkingHours>({
-    monday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-    tuesday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-    wednesday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-    thursday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-    friday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-    saturday: { isOpen: true, periods: [{ start: '13:00', end: '21:00' }] },
-    sunday: { isOpen: false, periods: [] }
-  });
+  
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHours>(defaultWorkingHours);
 
+  // Carregar dados ao montar o componente
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Carregar localizações e serviços
+        await fetchLocations();
+        await fetchServices();
+        
+        // Se não for um novo profissional, carregar dados existentes
+        if (!isNew) {
+          const professional = await getProfessionalById(params.id);
+          if (professional) {
+            setFormData({
+              firstName: professional.firstName,
+              lastName: professional.lastName,
+              email: professional.email,
+              phone: professional.phone,
+              locationId: professional.locationId || ''
+            });
+            
+            // Configurar serviços selecionados
+            setSelectedServices(professional.services.map(service => service.id));
+            
+            // Configurar horários de trabalho
+            if (professional.workingHours) {
+              setWorkingHours(professional.workingHours);
+            }
+          }
+        }
+        
+        setLoading(false);
+      } catch (error: any) {
+        console.error('Erro ao carregar dados:', error);
+        setError(error.message || 'Erro ao carregar dados');
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [isNew, params.id, getProfessionalById, fetchLocations, fetchServices]);
+
+  // Manipular adição de período
   const handleAddPeriod = (dayId: string) => {
     setWorkingHours(prev => ({
       ...prev,
@@ -99,6 +119,7 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
     }));
   };
 
+  // Manipular remoção de período
   const handleRemovePeriod = (dayId: string, periodIndex: number) => {
     setWorkingHours(prev => ({
       ...prev,
@@ -109,6 +130,7 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
     }));
   };
 
+  // Manipular alteração em um período
   const handlePeriodChange = (dayId: string, periodIndex: number, field: 'start' | 'end', value: string) => {
     setWorkingHours(prev => ({
       ...prev,
@@ -121,6 +143,18 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
     }));
   };
 
+  // Manipular toggle de dia de trabalho
+  const handleDayToggle = (dayId: string) => {
+    setWorkingHours(prev => ({
+      ...prev,
+      [dayId]: {
+        ...prev[dayId],
+        isOpen: !prev[dayId].isOpen
+      }
+    }));
+  };
+
+  // Aplicar horário para todos os dias
   const handleApplyToAllDays = (sourceDayId: string) => {
     const sourceDay = workingHours[sourceDayId];
     const newWorkingHours = { ...workingHours };
@@ -137,6 +171,45 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
     setWorkingHours(newWorkingHours);
   };
 
+  // Salvar profissional
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      
+      const professionalData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        locationId: formData.locationId || undefined,
+        serviceIds: selectedServices,
+        workingHours: workingHours
+      };
+      
+      if (isNew) {
+        await createProfessional(professionalData);
+      } else {
+        await updateProfessional(params.id, professionalData);
+      }
+      
+      router.push('/profissionais');
+    } catch (error: any) {
+      console.error('Erro ao salvar profissional:', error);
+      setError(error.message || 'Erro ao salvar profissional');
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen bg-gray-100 p-6 text-red-600">Erro: {error}</div>;
+  }
+
+  const name = isNew ? 'Novo profissional' : `${formData.firstName} ${formData.lastName}`;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="px-8 py-6">
@@ -146,17 +219,14 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
               onClick={() => router.back()}
               className="text-gray-500 hover:text-gray-700"
             >
-              ←
+              <ArrowLeft size={20} />
             </button>
             <h1 className="text-2xl text-gray-700 font-medium">
-              Profissionais {isNew ? '> Novo profissional' : '> Diego Menezes'}
+              Profissionais {isNew ? '> Novo profissional' : `> ${name}`}
             </h1>
           </div>
           <button
-            onClick={() => {
-              // Salvar alterações
-              router.back();
-            }}
+            onClick={handleSave}
             className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
           >
             Salvar
@@ -275,135 +345,135 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
                     Localização<span className="text-red-500">*</span>
                   </label>
                   <select
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    value={formData.locationId}
+                    onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
                     className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
                   >
                     <option value="">Selecione uma localização</option>
-                    <option value="1">Clínica Dr. Fábio Pizzini</option>
+                    {locations.map(location => (
+                      <option key={location.id} value={location.id}>{location.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
             )}
 
             {activeTab === 'services' && (
-              <div className="space-y-8">
-                {Object.entries(mockServices).map(([category, services]) => (
-                  <div key={category} className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-gray-700 capitalize">
-                        {category.replace(/([A-Z])/g, ' $1').trim()} ({services.length})
-                      </h3>
-                    </div>
-                    <div className="space-y-2">
-                      {services.map((service) => (
-                        <div
-                          key={service.id}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
+              <div className="space-y-6 max-w-3xl">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-4">Serviços que este profissional pode realizar</h3>
+                  
+                  <div className="grid grid-cols-1 gap-2">
+                    {services.map(service => (
+                      <div key={service.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`service-${service.id}`}
+                          checked={selectedServices.includes(service.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedServices([...selectedServices, service.id]);
+                            } else {
+                              setSelectedServices(selectedServices.filter(id => id !== service.id));
+                            }
+                          }}
+                          className="h-4 w-4 text-violet-600 focus:ring-violet-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={`service-${service.id}`} className="ml-3 block text-sm text-gray-700">
+                          <div className="flex items-center gap-2">
                             <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white"
+                              className="w-2 h-6 rounded-full"
                               style={{ backgroundColor: service.color }}
-                            >
-                              {service.initials}
-                            </div>
-                            <div>
-                              <h4 className="text-sm text-gray-900">{service.name}</h4>
-                              <p className="text-xs text-gray-500">{service.duration}</p>
-                            </div>
+                            ></div>
+                            <span>{service.name}</span>
+                            <span className="text-xs text-gray-500">{service.duration}min</span>
                           </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="sr-only peer"
-                              defaultChecked
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             )}
 
             {activeTab === 'hours' && (
-              <div className="space-y-6">
-                {weekDays.map((day) => (
-                  <div key={day.id} className="bg-gray-50 rounded-lg p-4">
+              <div className="space-y-4 max-w-3xl">
+                {weekDays.map(day => (
+                  <div key={day.id} className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-medium text-gray-700">{day.label}</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={workingHours[day.id].isOpen}
-                          onChange={(e) => {
-                            setWorkingHours(prev => ({
-                              ...prev,
-                              [day.id]: {
-                                ...prev[day.id],
-                                isOpen: e.target.checked
-                              }
-                            }));
-                          }}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
-                      </label>
+                      <div className="flex items-center">
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={workingHours[day.id].isOpen}
+                            onChange={() => handleDayToggle(day.id)}
+                          />
+                          <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                          <span className="ml-3 text-sm font-medium text-gray-900">{day.label}</span>
+                        </label>
+                      </div>
                     </div>
 
                     {workingHours[day.id].isOpen && (
                       <div className="space-y-3">
                         {workingHours[day.id].periods.map((period, index) => (
-                          <div key={index} className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-500">Iniciar</span>
-                              <input
-                                type="time"
-                                value={period.start}
-                                onChange={(e) => handlePeriodChange(day.id, index, 'start', e.target.value)}
-                                className="text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                              />
+                          <div key={index} className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <div className="flex flex-col">
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Iniciar
+                                </label>
+                                <input
+                                  type="time"
+                                  value={period.start}
+                                  onChange={(e) => handlePeriodChange(day.id, index, 'start', e.target.value)}
+                                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+                                />
+                              </div>
+                              <div className="flex flex-col">
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Concluir
+                                </label>
+                                <input
+                                  type="time"
+                                  value={period.end}
+                                  onChange={(e) => handlePeriodChange(day.id, index, 'end', e.target.value)}
+                                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+                                />
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-500">Concluir</span>
-                              <input
-                                type="time"
-                                value={period.end}
-                                onChange={(e) => handlePeriodChange(day.id, index, 'end', e.target.value)}
-                                className="text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-end space-x-2 pb-1">
                               <button
+                                type="button"
                                 onClick={() => handleRemovePeriod(day.id, index)}
-                                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                               >
-                                <Trash className="w-4 h-4" />
+                                <Trash size={16} />
                               </button>
                               <button
-                                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                                type="button"
+                                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                               >
-                                <PencilSimple className="w-4 h-4" />
+                                <PencilSimple size={16} />
                               </button>
                             </div>
                           </div>
                         ))}
-
-                        <div className="flex items-center gap-4 mt-4">
+                        <div className="flex space-x-4 pt-2">
                           <button
+                            type="button"
                             onClick={() => handleAddPeriod(day.id)}
                             className="text-sm text-violet-600 hover:text-violet-700 font-medium"
                           >
                             + Adicionar período
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleApplyToAllDays(day.id)}
                             className="text-sm text-violet-600 hover:text-violet-700 font-medium"
                           >
-                            + Aplicar para outros dias
+                            Aplicar para todos os dias
                           </button>
                         </div>
                       </div>

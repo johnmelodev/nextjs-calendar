@@ -1,72 +1,69 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PlusCircle, DotsThree, PencilSimple, Power, Trash, Key } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
+import { useProfessionalStore } from '../stores/professionalStore';
+import { useLocationStore } from '../stores/locationStore';
+import { useServiceStore } from '../stores/serviceStore';
 
-// Mock data inicial
-const initialProfessionals = [
-  {
-    id: 1,
-    name: 'Diego Menezes',
-    email: 'diego@hellodoc.com.br',
-    phone: '',
-    initials: 'DM',
-    color: '#d946ef',
-    status: 'indisponivel'
-  },
-  {
-    id: 2,
-    name: 'Dr. Fábio Pizzini',
-    email: 'pizzinifabio@gmail.com',
-    phone: '15997104500',
-    initials: 'DP',
-    color: '#ec4899',
-    status: 'disponivel'
-  },
-  {
-    id: 3,
-    name: 'Fernanda Pereira',
-    email: 'fernanda_dydy@hotmail.com',
-    phone: '',
-    initials: 'FP',
-    color: '#a855f7',
-    status: 'disponivel'
-  },
-  {
-    id: 4,
-    name: 'Prof. Fábio Gianolla',
-    email: 'fgianoll@gmail.com',
-    phone: '15991083271',
-    initials: 'PG',
-    color: '#84cc16',
-    status: 'disponivel'
-  },
-  {
-    id: 5,
-    name: 'Thais Pizzini',
-    email: 'tagpizzini@gmail.com',
-    phone: '',
-    initials: 'TP',
-    color: '#ec4899',
-    status: 'indisponivel'
-  }
-];
-
+// Componente para o modal de adicionar profissional
 interface AddProfessionalModalProps {
   onClose: () => void;
   onAdd: (data: any) => void;
+  locations: any[];
+  services: any[];
 }
 
-const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => {
+const AddProfessionalModal = ({ onClose, onAdd, locations, services }: AddProfessionalModalProps) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     location: '',
-    services: []
+    services: [] as string[]
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Função para validar o formulário
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.firstName) {
+      newErrors.firstName = 'O primeiro nome é obrigatório';
+    }
+    
+    if (!formData.lastName) {
+      newErrors.lastName = 'O sobrenome é obrigatório';
+    }
+    
+    if (!formData.email) {
+      newErrors.email = 'O e-mail é obrigatório';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'E-mail inválido';
+    }
+    
+    if (!formData.phone) {
+      newErrors.phone = 'O telefone é obrigatório';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Função para formatar o telefone
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 2) {
+      return numbers;
+    } else if (numbers.length <= 7) {
+      return `(${numbers.substring(0, 2)}) ${numbers.substring(2)}`;
+    } else {
+      return `(${numbers.substring(0, 2)}) ${numbers.substring(2, 7)}-${numbers.substring(7, 11)}`;
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50" onClick={onClose}>
@@ -84,9 +81,10 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
               type="text"
               value={formData.firstName}
               onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              className={`w-full text-sm border-0 ring-1 ${errors.firstName ? 'ring-red-500' : 'ring-gray-200'} rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500`}
               placeholder="Primeiro Nome"
             />
+            {errors.firstName && <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>}
           </div>
 
           <div>
@@ -97,9 +95,10 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
               type="text"
               value={formData.lastName}
               onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              className={`w-full text-sm border-0 ring-1 ${errors.lastName ? 'ring-red-500' : 'ring-gray-200'} rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500`}
               placeholder="Sobrenome"
             />
+            {errors.lastName && <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>}
           </div>
 
           <div>
@@ -110,9 +109,10 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              className={`w-full text-sm border-0 ring-1 ${errors.email ? 'ring-red-500' : 'ring-gray-200'} rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500`}
               placeholder="E-mail"
             />
+            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
           </div>
 
           <div>
@@ -128,11 +128,12 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
               <input
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+                onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                className={`w-full text-sm border-0 ring-1 ${errors.phone ? 'ring-red-500' : 'ring-gray-200'} rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500`}
                 placeholder="Número de Telefone"
               />
             </div>
+            {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
           </div>
 
           <div>
@@ -145,7 +146,9 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
               className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
             >
               <option value="">Selecione uma localização</option>
-              <option value="1">Clínica Dr. Fábio Pizzini</option>
+              {locations.map(location => (
+                <option key={location.id} value={location.id}>{location.name}</option>
+              ))}
             </select>
           </div>
 
@@ -161,9 +164,11 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
                 setFormData({ ...formData, services: options });
               }}
               className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              size={5}
             >
-              <option value="1">C. Clinica Nutro (Avulsa)</option>
-              <option value="2">C. Completa (Nutro+Nutri+Treino)</option>
+              {services.map(service => (
+                <option key={service.id} value={service.id}>{service.name}</option>
+              ))}
             </select>
           </div>
 
@@ -178,7 +183,7 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
             <button
               type="button"
               onClick={() => {
-                if (formData.firstName && formData.lastName && formData.email) {
+                if (validate()) {
                   onAdd(formData);
                   onClose();
                 }
@@ -195,27 +200,62 @@ const AddProfessionalModal = ({ onClose, onAdd }: AddProfessionalModalProps) => 
 };
 
 export default function ProfissionaisPage() {
-  const [professionals, setProfessionals] = useState(initialProfessionals);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const router = useRouter();
+  const { 
+    professionals, 
+    loading, 
+    error, 
+    fetchProfessionals, 
+    createProfessional, 
+    deleteProfessional 
+  } = useProfessionalStore();
+  const { locations, fetchLocations } = useLocationStore();
+  const { services, fetchServices } = useServiceStore();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const handleAddProfessional = (data: any) => {
-    const newProfessional = {
-      id: professionals.length + 1,
-      name: `${data.firstName} ${data.lastName}`,
-      email: data.email,
-      phone: data.phone,
-      initials: `${data.firstName[0]}${data.lastName[0]}`.toUpperCase(),
-      color: '#' + Math.floor(Math.random()*16777215).toString(16),
-      status: 'disponivel'
-    };
-    setProfessionals([...professionals, newProfessional]);
+  // Carregar dados ao montar o componente
+  useEffect(() => {
+    fetchProfessionals();
+    fetchLocations();
+    fetchServices();
+  }, [fetchProfessionals, fetchLocations, fetchServices]);
+
+  // Função para adicionar um novo profissional
+  const handleAddProfessional = async (data: any) => {
+    try {
+      await createProfessional(data);
+    } catch (error) {
+      console.error('Erro ao adicionar profissional:', error);
+    }
   };
 
-  const handleDeleteProfessional = (id: number) => {
-    setProfessionals(professionals.filter(prof => prof.id !== id));
+  // Função para excluir um profissional
+  const handleDeleteProfessional = async (id: string) => {
+    try {
+      await deleteProfessional(id);
+    } catch (error) {
+      console.error('Erro ao excluir profissional:', error);
+    }
   };
+
+  // Função para alternar o status do profissional
+  const handleToggleStatus = (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'disponivel' ? 'indisponivel' : 'disponivel';
+      useProfessionalStore.getState().updateProfessional(id, { status: newStatus });
+    } catch (error) {
+      console.error('Erro ao alterar status do profissional:', error);
+    }
+  };
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen bg-gray-100 p-6 text-red-600">Erro: {error}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -248,12 +288,12 @@ export default function ProfissionaisPage() {
               {professionals.map((professional) => (
                 <tr 
                   key={professional.id} 
-                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors"
+                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
                 >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white"
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                         style={{ backgroundColor: professional.color }}
                       >
                         {professional.initials}
@@ -261,60 +301,49 @@ export default function ProfissionaisPage() {
                       <span className="text-sm text-gray-900">{professional.name}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{professional.email}</td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{professional.phone || '-'}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-4 px-4 text-sm text-gray-500">{professional.email}</td>
+                  <td className="py-4 px-4 text-sm text-gray-500">{professional.phone || '-'}</td>
+                  <td className="py-4 px-4">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         professional.status === 'disponivel'
-                          ? 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {professional.status === 'disponivel' ? 'Disponível' : 'Indisponível'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 relative">
+                  <td className="py-4 px-4 relative">
                     <button
                       onClick={() => setOpenMenuId(openMenuId === professional.id ? null : professional.id)}
-                      className="p-2 hover:bg-gray-100 rounded-full"
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
                     >
-                      <DotsThree className="w-5 h-5 text-gray-400" weight="bold" />
+                      <DotsThree weight="bold" className="w-5 h-5" />
                     </button>
                     
                     {openMenuId === professional.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 py-1 z-50">
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 py-1 z-10">
                         <button
-                          onClick={() => {
-                            router.push(`/profissionais/${professional.id}`);
-                            setOpenMenuId(null);
-                          }}
+                          onClick={() => router.push(`/profissionais/${professional.id}`)}
                           className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                         >
                           <PencilSimple className="w-4 h-4" />
-                          Editar profissional
+                          Editar
                         </button>
                         <button
-                          className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Key className="w-4 h-4" />
-                          Redefinir senha
-                        </button>
-                        <button
+                          onClick={() => handleToggleStatus(professional.id, professional.status)}
                           className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                         >
                           <Power className="w-4 h-4" />
-                          Desativar profissional
+                          {professional.status === 'disponivel' ? 'Desativar' : 'Ativar'}
                         </button>
                         <button
-                          onClick={() => {
-                            handleDeleteProfessional(professional.id);
-                            setOpenMenuId(null);
-                          }}
+                          onClick={() => handleDeleteProfessional(professional.id)}
                           className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-gray-50 flex items-center gap-2"
                         >
                           <Trash className="w-4 h-4" />
-                          Excluir profissional
+                          Excluir
                         </button>
                       </div>
                     )}
@@ -330,6 +359,8 @@ export default function ProfissionaisPage() {
         <AddProfessionalModal
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddProfessional}
+          locations={locations}
+          services={services}
         />
       )}
     </div>

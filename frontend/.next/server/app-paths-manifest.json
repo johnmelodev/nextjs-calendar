@@ -1,8 +1,8 @@
 {
   "/page": "app/page.js",
+  "/agendamentos/page": "app/agendamentos/page.js",
   "/profissionais/page": "app/profissionais/page.js",
   "/servicos/page": "app/servicos/page.js",
-  "/agendamentos/page": "app/agendamentos/page.js",
   "/locais/page": "app/locais/page.js",
-  "/locais/novo/page": "app/locais/novo/page.js"
+  "/profissionais/[id]/page": "app/profissionais/[id]/page.js"
 }

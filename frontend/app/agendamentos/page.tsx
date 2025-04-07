@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, MagnifyingGlass, X, Clock, UserPlus, DotsThree, Activity, UserMinus, Trash } from '@phosphor-icons/react';
+import { useState, useEffect } from 'react';
+import { PlusCircle, MagnifyingGlass, X, Clock, UserPlus, DotsThree, Activity, UserMinus, Trash, WarningCircle } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAppointmentStore } from '../stores/appointmentStore';
+import { useServiceStore } from '../stores/serviceStore';
+import { useLocationStore } from '../stores/locationStore';
+import { useProfessionalStore } from '../stores/professionalStore';
 
 // Mock de dados para exemplo
 const appointments = [
@@ -276,6 +280,138 @@ interface AddAppointmentFormProps {
 
 const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
   const [showAddClientForm, setShowAddClientForm] = useState(false);
+  const { services, fetchServices } = useServiceStore();
+  const { professionals, fetchProfessionals } = useProfessionalStore();
+  const { locations, fetchLocations } = useLocationStore();
+  const { appointments, fetchAppointments, createAppointment } = useAppointmentStore();
+  const [formData, setFormData] = useState({
+    serviceId: '',
+    professionalId: '',
+    locationId: '',
+    date: '',
+    time: '',
+    clientName: '',
+    clientPhone: '',
+    notes: ''
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchServices();
+        await fetchLocations();
+        await fetchProfessionals();
+        await fetchAppointments();
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      }
+    };
+    
+    loadData();
+  }, [fetchServices, fetchLocations, fetchProfessionals, fetchAppointments]);
+
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+  
+    try {
+      setIsSubmitting(true);
+      
+      // Obtém o serviço selecionado para calcular a duração
+      const selectedService = services.find(service => service.id === formData.serviceId);
+      
+      // Cria o objeto de agendamento
+      const appointmentData = {
+        serviceId: formData.serviceId,
+        professionalId: formData.professionalId,
+        locationId: formData.locationId,
+        clientName: formData.clientName,
+        clientPhone: formData.clientPhone,
+        startTime: new Date(`${formData.date}T${formData.time}`).toISOString(),
+        endTime: calculateEndTime(formData.date, formData.time, selectedService?.duration || 30),
+        notes: formData.notes || '',
+        status: 'scheduled'
+      };
+      
+      console.log('Criando agendamento:', appointmentData);
+      
+      // Envia para a API
+      await createAppointment(appointmentData);
+      
+      // Fecha o modal e limpa o formulário
+      setIsModalOpen(false);
+      setFormData({
+        serviceId: '',
+        professionalId: '',
+        locationId: '',
+        date: '',
+        time: '',
+        clientName: '',
+        clientPhone: '',
+        notes: ''
+      });
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error('Erro ao criar agendamento:', error);
+      setFormError('Ocorreu um erro ao criar o agendamento. Tente novamente.');
+      setIsSubmitting(false);
+    }
+  };
+  
+  const validateForm = () => {
+    if (!formData.serviceId) {
+      setFormError('Selecione um serviço');
+      return false;
+    }
+    
+    if (!formData.professionalId) {
+      setFormError('Selecione um profissional');
+      return false;
+    }
+    
+    if (!formData.locationId) {
+      setFormError('Selecione um local');
+      return false;
+    }
+    
+    if (!formData.date) {
+      setFormError('Selecione uma data');
+      return false;
+    }
+    
+    if (!formData.time) {
+      setFormError('Selecione um horário');
+      return false;
+    }
+    
+    if (!formData.clientName.trim()) {
+      setFormError('Informe o nome do cliente');
+      return false;
+    }
+    
+    if (!formData.clientPhone.trim()) {
+      setFormError('Informe o telefone do cliente');
+      return false;
+    }
+    
+    setFormError(null);
+    return true;
+  };
+  
+  // Calcular a hora de término com base na duração do serviço
+  const calculateEndTime = (date: string, startTime: string, durationMinutes: number): string => {
+    const startDateTime = new Date(`${date}T${startTime}`);
+    const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
+    return endDateTime.toISOString();
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50" onClick={onClose}>
@@ -291,16 +427,35 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
           </button>
         </div>
 
+        {formError && (
+          <div className="bg-red-50 p-4 rounded-md mb-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <WarningCircle className="h-5 w-5 text-red-400" aria-hidden="true" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">{formError}</h3>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Serviços<span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-2">Selecione o serviço desejado</p>
-            <select className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500">
+            <select
+              value={formData.serviceId}
+              onChange={(e) => handleFormChange('serviceId', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+            >
               <option value="">Selecione o serviço</option>
-              {services.map(service => (
-                <option key={service} value={service}>{service}</option>
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name} ({service.duration}min)
+                </option>
               ))}
             </select>
           </div>
@@ -310,10 +465,34 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
               Profissionais<span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-2">Selecione o(s) profissional(s) responsável(s) por este agendamento</p>
-            <select className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500">
-              <option value="">Profissionais</option>
-              {professionals.map(professional => (
-                <option key={professional} value={professional}>{professional}</option>
+            <select
+              value={formData.professionalId}
+              onChange={(e) => handleFormChange('professionalId', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+            >
+              <option value="">Selecione o profissional</option>
+              {professionals.map((professional) => (
+                <option key={professional.id} value={professional.id}>
+                  {professional.firstName} {professional.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Localização
+            </label>
+            <select
+              value={formData.locationId}
+              onChange={(e) => handleFormChange('locationId', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+            >
+              <option value="">Selecione o local</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
               ))}
             </select>
           </div>
@@ -325,68 +504,62 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
               </label>
               <div className="relative">
                 <input
-                  type="text"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleFormChange('date', e.target.value)}
                   className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                  placeholder="03/04/2025"
                 />
-                <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Hora<span className="text-red-500">*</span>
+                Horário<span className="text-red-500">*</span>
               </label>
-              <select className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500">
-                <option value="">Selecione a hora</option>
-                <option>08:00</option>
-                <option>09:00</option>
-                <option>10:00</option>
-                {/* Adicionar mais horários */}
-              </select>
+              <input
+                type="time"
+                value={formData.time}
+                onChange={(e) => handleFormChange('time', e.target.value)}
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Localização
+              Nome do Cliente
             </label>
-            <select className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500">
-              <option value="">Selecione o local</option>
-              <option>Clínica A</option>
-              <option>Clínica B</option>
-              {/* Adicionar mais locais */}
-            </select>
+            <input
+              type="text"
+              value={formData.clientName}
+              onChange={(e) => handleFormChange('clientName', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              placeholder="Nome completo"
+            />
           </div>
-
+          
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Clientes
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowAddClientForm(true)}
-                className="inline-flex items-center gap-1 text-sm font-medium text-violet-600 hover:text-violet-700"
-              >
-                <UserPlus className="w-4 h-4" />
-                Adicionar Cliente
-              </button>
-            </div>
-            <select className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500">
-              <option value="">Selecione o cliente</option>
-              <option>Felipe Henrique</option>
-              <option>Teste do Teste</option>
-              {/* Adicionar mais clientes */}
-            </select>
+            <label className="block text-sm font-medium text-gray-700">
+              Telefone do Cliente
+            </label>
+            <input
+              type="tel"
+              value={formData.clientPhone}
+              onChange={(e) => handleFormChange('clientPhone', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              placeholder="(00) 00000-0000"
+            />
           </div>
-
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nota
+            <label className="block text-sm font-medium text-gray-700">
+              Observações
             </label>
             <textarea
-              className="w-full h-24 text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-              placeholder="As notas não são visíveis para o paciente"
+              value={formData.notes}
+              onChange={(e) => handleFormChange('notes', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              rows={3}
+              placeholder="Adicione observações ou instruções especiais aqui"
             />
           </div>
 
@@ -400,6 +573,7 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
             </button>
             <button
               type="submit"
+              onClick={handleSubmit}
               className="px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg"
             >
               Adicionar Agendamento
@@ -633,6 +807,29 @@ export default function Appointments() {
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [selectedActivityAppointment, setSelectedActivityAppointment] = useState<typeof appointments[0] | null>(null);
   const [appointmentsData, setAppointmentsData] = useState(appointments);
+  const { appointments, fetchAppointments, createAppointment } = useAppointmentStore();
+  const { services, fetchServices } = useServiceStore();
+  const { locations, fetchLocations } = useLocationStore();
+  const { professionals, fetchProfessionals } = useProfessionalStore();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        await fetchServices();
+        await fetchLocations();
+        await fetchProfessionals();
+        await fetchAppointments();
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [fetchServices, fetchLocations, fetchProfessionals, fetchAppointments]);
 
   // Função para filtrar os agendamentos
   const filteredAppointments = appointmentsData.filter(appointment => {
@@ -752,20 +949,20 @@ export default function Appointments() {
                     </label>
                     <div className="space-y-2">
                       {services.map((service) => (
-                        <label key={service} className="flex items-center gap-2">
+                        <label key={service.id} className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                            checked={selectedServices.includes(service)}
+                            checked={selectedServices.includes(service.name)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedServices([...selectedServices, service]);
+                                setSelectedServices([...selectedServices, service.name]);
                               } else {
-                                setSelectedServices(selectedServices.filter(s => s !== service));
+                                setSelectedServices(selectedServices.filter(s => s !== service.name));
                               }
                             }}
                           />
-                          <span className="text-sm text-gray-700">{service}</span>
+                          <span className="text-sm text-gray-700">{service.name}</span>
                         </label>
                       ))}
                     </div>
@@ -777,20 +974,20 @@ export default function Appointments() {
                     </label>
                     <div className="space-y-2">
                       {professionals.map((professional) => (
-                        <label key={professional} className="flex items-center gap-2">
+                        <label key={professional.id} className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                            checked={selectedProfessionals.includes(professional)}
+                            checked={selectedProfessionals.includes(professional.firstName + ' ' + professional.lastName)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedProfessionals([...selectedProfessionals, professional]);
+                                setSelectedProfessionals([...selectedProfessionals, professional.firstName + ' ' + professional.lastName]);
                               } else {
-                                setSelectedProfessionals(selectedProfessionals.filter(p => p !== professional));
+                                setSelectedProfessionals(selectedProfessionals.filter(p => p !== professional.firstName + ' ' + professional.lastName));
                               }
                             }}
                           />
-                          <span className="text-sm text-gray-700">{professional}</span>
+                          <span className="text-sm text-gray-700">{professional.firstName} {professional.lastName}</span>
                         </label>
                       ))}
                     </div>
