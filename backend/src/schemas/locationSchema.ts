@@ -14,13 +14,21 @@ const workingHoursSchema = z.object({
   ),
 });
 
-const workingHoursByDaySchema = z.record(workingHoursSchema);
+const workingHoursByDaySchema = z.object({
+  monday: workingHoursSchema,
+  tuesday: workingHoursSchema,
+  wednesday: workingHoursSchema,
+  thursday: workingHoursSchema,
+  friday: workingHoursSchema,
+  saturday: workingHoursSchema,
+  sunday: workingHoursSchema,
+});
 
 export const createLocationSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   address: z.string().min(5, "Endereço deve ter pelo menos 5 caracteres"),
   phone: z.string().min(10, "Telefone inválido"),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   workingHours: workingHoursByDaySchema,
   isActive: z.boolean().default(true),
   city: z.string().min(2, "Cidade inválida"),

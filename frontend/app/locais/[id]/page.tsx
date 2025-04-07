@@ -31,7 +31,7 @@ interface Location {
 
 export default function LocationDetailsPage({ params }: { params: { id: string } }) {
   const [activeTab, setActiveTab] = useState<'info' | 'hours'>('info');
-  const { locations, loading, error, fetchLocations } = useLocationStore();
+  const { locations, loading, error, fetchLocations, updateLocation } = useLocationStore();
   const [location, setLocation] = useState<Location | null>(null);
 
   useEffect(() => {
@@ -123,8 +123,16 @@ export default function LocationDetailsPage({ params }: { params: { id: string }
                 ) : (
                   <WorkingHoursForm
                     initialData={location.workingHours}
-                    onChange={(workingHours) => {
-                      // Implementar atualização dos horários
+                    onChange={async (workingHours) => {
+                      try {
+                        await updateLocation(location.id, {
+                          ...location,
+                          workingHours
+                        });
+                        await fetchLocations();
+                      } catch (error) {
+                        console.error('Erro ao atualizar horários:', error);
+                      }
                     }}
                   />
                 )}

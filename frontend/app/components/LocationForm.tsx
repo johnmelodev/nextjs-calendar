@@ -56,9 +56,9 @@ export default function LocationForm({ initialData, onSuccess }: LocationFormPro
     try {
       const formattedData = {
         ...formData,
-        workingHours: defaultWorkingHours, // Garantindo que sempre enviamos o workingHours
-        phone: formData.phone.replace(/\D/g, ''), // Remove caracteres não numéricos
-        zipCode: formData.zipCode.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2'), // Formata CEP
+        workingHours: formData.workingHours,
+        phone: formData.phone.replace(/\D/g, ''),
+        zipCode: formData.zipCode.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2'),
       };
 
       if (initialData) {

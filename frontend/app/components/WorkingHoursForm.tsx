@@ -31,8 +31,34 @@ const daysOfWeek = [
   { key: 'sunday', label: 'Domingo' },
 ];
 
-export default function WorkingHoursForm({ initialData, onChange }: WorkingHoursFormProps) {
-  const [workingHours, setWorkingHours] = useState<WorkingHours>(initialData);
+const defaultWorkingHours: WorkingHours = {
+  monday: { isOpen: false, periods: [{ start: '09:00', end: '18:00' }] },
+  tuesday: { isOpen: false, periods: [{ start: '09:00', end: '18:00' }] },
+  wednesday: { isOpen: false, periods: [{ start: '09:00', end: '18:00' }] },
+  thursday: { isOpen: false, periods: [{ start: '09:00', end: '18:00' }] },
+  friday: { isOpen: false, periods: [{ start: '09:00', end: '18:00' }] },
+  saturday: { isOpen: false, periods: [{ start: '09:00', end: '18:00' }] },
+  sunday: { isOpen: false, periods: [{ start: '09:00', end: '18:00' }] },
+};
+
+export default function WorkingHoursForm({ initialData = defaultWorkingHours, onChange }: WorkingHoursFormProps) {
+  const [workingHours, setWorkingHours] = useState<WorkingHours>(() => {
+    // Garante que todos os dias da semana têm uma estrutura válida
+    const mergedHours = { ...defaultWorkingHours };
+    if (initialData) {
+      daysOfWeek.forEach(({ key }) => {
+        if (initialData[key]) {
+          mergedHours[key] = {
+            isOpen: initialData[key].isOpen ?? false,
+            periods: initialData[key].periods?.length > 0 
+              ? initialData[key].periods 
+              : [{ start: '09:00', end: '18:00' }]
+          };
+        }
+      });
+    }
+    return mergedHours;
+  });
 
   const handleDayToggle = (day: string) => {
     const updatedHours = {
