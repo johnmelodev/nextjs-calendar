@@ -316,14 +316,14 @@ export default function ServicosPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-100">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-medium text-gray-900">Serviços</h1>
         <button
           onClick={() => setShowAddService(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg"
+          className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
         >
-          <PlusCircle size={20} />
+          <PlusCircle className="h-5 w-5" weight="fill" />
           Adicionar Serviço
         </button>
       </div>
@@ -399,7 +399,7 @@ export default function ServicosPage() {
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-medium"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                           style={{ backgroundColor: service.color }}
                         >
                           {service.name.substring(0, 2).toUpperCase()}

@@ -937,6 +937,9 @@ video {
 .grid-cols-\[280px\2c 1fr\] {
   grid-template-columns: 280px 1fr;
 }
+.grid-cols-\[300px\2c 1fr\] {
+  grid-template-columns: 300px 1fr;
+}
 .flex-col {
   flex-direction: column;
 }
@@ -1198,6 +1201,10 @@ video {
 .bg-yellow-400 {
   --tw-bg-opacity: 1;
   background-color: rgb(250 204 21 / var(--tw-bg-opacity, 1));
+}
+.bg-pink-300 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(249 168 212 / var(--tw-bg-opacity, 1));
 }
 .bg-opacity-25 {
   --tw-bg-opacity: 0.25;

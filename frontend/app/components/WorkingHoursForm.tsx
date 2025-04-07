@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Switch } from '@headlessui/react';
-import { BiPencil, BiTrash } from 'react-icons/bi';
+import { Pencil, Trash, Plus } from '@phosphor-icons/react';
 
 interface Period {
   start: string;
@@ -147,7 +147,7 @@ export default function WorkingHoursForm({ initialData = defaultWorkingHours, on
                           type="time"
                           value={period.start}
                           onChange={(e) => handlePeriodChange(key, index, 'start', e.target.value)}
-                          className="block w-32 rounded-lg border-gray-200 text-sm focus:border-violet-500 focus:ring-violet-500"
+                          className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
                         />
                       </div>
                       <div className="flex flex-col">
@@ -158,7 +158,7 @@ export default function WorkingHoursForm({ initialData = defaultWorkingHours, on
                           type="time"
                           value={period.end}
                           onChange={(e) => handlePeriodChange(key, index, 'end', e.target.value)}
-                          className="block w-32 rounded-lg border-gray-200 text-sm focus:border-violet-500 focus:ring-violet-500"
+                          className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
                         />
                       </div>
                     </div>
@@ -166,15 +166,15 @@ export default function WorkingHoursForm({ initialData = defaultWorkingHours, on
                       <button
                         type="button"
                         onClick={() => removePeriod(key, index)}
-                        className="p-1.5 text-gray-500 hover:text-gray-700"
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                       >
-                        <BiTrash className="h-5 w-5" />
+                        <Trash size={16} />
                       </button>
                       <button
                         type="button"
-                        className="p-1.5 text-gray-500 hover:text-gray-700"
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                       >
-                        <BiPencil className="h-5 w-5" />
+                        <Pencil size={16} />
                       </button>
                     </div>
                   </div>
@@ -183,9 +183,10 @@ export default function WorkingHoursForm({ initialData = defaultWorkingHours, on
                   <button
                     type="button"
                     onClick={() => addPeriod(key)}
-                    className="text-sm text-violet-600 hover:text-violet-700 font-medium"
+                    className="inline-flex items-center gap-1 text-sm text-violet-600 hover:text-violet-700 font-medium"
                   >
-                    + Aplicar para outros dias
+                    <Plus size={16} />
+                    Adicionar período
                   </button>
                 </div>
               </div>
