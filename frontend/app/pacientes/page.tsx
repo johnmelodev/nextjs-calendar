@@ -1,325 +1,385 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, DotsThree, PencilSimple, Power, Trash } from '@phosphor-icons/react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import {
+  Box,
+  Button,
+  Center,
+  Flex,
+  FormControl,
+  FormLabel,
+  Icon,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Table,
+  TableContainer,
+  Tbody,
+  Td,
+  Text,
+  Th,
+  Thead,
+  Tr,
+  useColorModeValue,
+  useDisclosure,
+  useToast,
+  VStack,
+} from "@chakra-ui/react";
+import { FaPen, FaPlus, FaSearch, FaTrash } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import InputMask from "react-input-mask";
+import { usePatientStore } from "../stores/patientStore";
 
-// Mock data inicial
-const initialPatients = [
-  {
-    id: 1,
-    name: 'Cliente',
-    initials: 'C',
-    color: '#d946ef',
-    appointments: 1,
-    lastAppointment: '04/10/23',
-    createdAt: '02/04/2025'
-  },
-  {
-    id: 2,
-    name: 'Felipe',
-    initials: 'F',
-    color: '#a855f7',
-    appointments: 0,
-    lastAppointment: null,
-    createdAt: '01/04/2025'
-  },
-  {
-    id: 3,
-    name: 'Felipe Henrique',
-    initials: 'FH',
-    color: '#ec4899',
-    appointments: 3,
-    lastAppointment: '01/04/25',
-    createdAt: '01/04/2025'
-  },
-  {
-    id: 4,
-    name: 'João Silva',
-    initials: 'JS',
-    color: '#84cc16',
-    appointments: 22,
-    lastAppointment: '26/05/25',
-    createdAt: '18/02/2025'
-  }
-];
+// Componente para o Modal de adicionar paciente
+function AddPatientModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const { createPatient } = usePatientStore();
+  const toast = useToast();
 
-interface AddPatientModalProps {
-  onClose: () => void;
-  onAdd: (data: any) => void;
+  const resetForm = () => {
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setCpf("");
+    setBirthDate("");
+    setErrors({});
+  };
+
+  const formatPhone = (value: string) => {
+    return value.replace(/\D/g, "");
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!firstName) newErrors.firstName = "Primeiro nome é obrigatório";
+    if (!lastName) newErrors.lastName = "Sobrenome é obrigatório";
+    if (!email) newErrors.email = "Email é obrigatório";
+    if (email && !/\S+@\S+\.\S+/.test(email)) newErrors.email = "Email inválido";
+    if (!phone) newErrors.phone = "Telefone é obrigatório";
+    if (!cpf) newErrors.cpf = "CPF é obrigatório";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    
+    try {
+      const data = {
+        firstName,
+        lastName,
+        email,
+        phone: formatPhone(phone),
+        cpf: cpf.replace(/\D/g, ""),
+        birthDate: birthDate || null,
+      };
+      
+      const result = await createPatient(data);
+      
+      if (result) {
+        toast({
+          title: "Paciente adicionado",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+        resetForm();
+        onClose();
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao adicionar paciente",
+        description: "Não foi possível adicionar o paciente. Tente novamente.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Adicionar Paciente</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <VStack spacing={4}>
+            <FormControl isInvalid={!!errors.firstName}>
+              <FormLabel>Primeiro Nome</FormLabel>
+              <Input
+                placeholder="Digite o primeiro nome"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+              {errors.firstName && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.firstName}
+                </Text>
+              )}
+            </FormControl>
+
+            <FormControl isInvalid={!!errors.lastName}>
+              <FormLabel>Sobrenome</FormLabel>
+              <Input
+                placeholder="Digite o sobrenome"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+              {errors.lastName && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.lastName}
+                </Text>
+              )}
+            </FormControl>
+
+            <FormControl isInvalid={!!errors.email}>
+              <FormLabel>Email</FormLabel>
+              <Input
+                placeholder="Digite o email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              {errors.email && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.email}
+                </Text>
+              )}
+            </FormControl>
+
+            <FormControl isInvalid={!!errors.phone}>
+              <FormLabel>Telefone</FormLabel>
+              <Input
+                as={InputMask}
+                mask="(99) 99999-9999"
+                placeholder="(00) 00000-0000"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              {errors.phone && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.phone}
+                </Text>
+              )}
+            </FormControl>
+
+            <FormControl isInvalid={!!errors.cpf}>
+              <FormLabel>CPF</FormLabel>
+              <Input
+                as={InputMask}
+                mask="999.999.999-99"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+              />
+              {errors.cpf && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.cpf}
+                </Text>
+              )}
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Data de Nascimento</FormLabel>
+              <Input
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+              />
+            </FormControl>
+          </VStack>
+        </ModalBody>
+        <ModalFooter>
+          <Button colorScheme="gray" mr={3} onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button colorScheme="blue" onClick={handleSubmit}>
+            Adicionar
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
 }
 
-const AddPatientModal = ({ onClose, onAdd }: AddPatientModalProps) => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    birthDate: '',
-    cpf: '',
-    email: '',
-    phone: ''
-  });
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-[480px]" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-medium text-gray-900 mb-6">
-          Adicionar paciente
-        </h2>
-        
-        <form className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Primeiro Nome<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-              placeholder="Primeiro Nome"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Sobrenome<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-              placeholder="Sobrenome"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Data de Nascimento
-            </label>
-            <input
-              type="date"
-              value={formData.birthDate}
-              onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-              placeholder="Data de Nascimento"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              CPF<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.cpf}
-              onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-              placeholder="CPF"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              E-mail<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-              placeholder="E-mail"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Telefone<span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-[100px,1fr] gap-2">
-              <select
-                className="text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="+55">🇧🇷 +55</option>
-              </select>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                placeholder="Número de Telefone"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-50 rounded-lg"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (formData.firstName && formData.lastName && formData.email) {
-                  onAdd(formData);
-                  onClose();
-                }
-              }}
-              className="px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg"
-            >
-              Adicionar Paciente
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-export default function PatientsPage() {
-  const [patients, setPatients] = useState(initialPatients);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+export default function PacientesPage() {
+  const { patients, loading, fetchPatients, deletePatient } = usePatientStore();
+  const [searchTerm, setSearchTerm] = useState("");
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const router = useRouter();
+  const toast = useToast();
+  
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
-  const handleAddPatient = (data: any) => {
-    const newPatient = {
-      id: patients.length + 1,
-      name: `${data.firstName} ${data.lastName}`,
-      initials: `${data.firstName[0]}${data.lastName[0]}`.toUpperCase(),
-      color: '#' + Math.floor(Math.random()*16777215).toString(16),
-      appointments: 0,
-      lastAppointment: null,
-      createdAt: new Date().toLocaleDateString('pt-BR')
-    };
-    setPatients([...patients, newPatient]);
+  const handleSearch = () => {
+    fetchPatients(searchTerm);
   };
 
-  const handleDeletePatient = (id: number) => {
-    setPatients(patients.filter(patient => patient.id !== id));
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
-  const filteredPatients = patients.filter(patient => {
-    const searchValue = searchTerm.toLowerCase().trim();
-    const patientName = patient.name.toLowerCase();
-    
-    // Verifica se o nome do paciente contém o termo de busca
-    return patientName.includes(searchValue);
-  });
+  const handleEdit = (id: string) => {
+    router.push(`/pacientes/${id}`);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Tem certeza que deseja remover este paciente?")) {
+      const success = await deletePatient(id);
+      
+      if (success) {
+        toast({
+          title: "Paciente removido",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: "Erro ao remover paciente",
+          description: "Não foi possível remover o paciente. Tente novamente.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    }
+  };
+
+  const textColor = useColorModeValue("gray.700", "white");
+  const bgColor = useColorModeValue("white", "gray.800");
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="px-8 py-6">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl text-gray-700 font-medium">Pacientes</h1>
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
+    <Box pt={{ base: "90px", md: "80px", xl: "80px" }}>
+      <Flex
+        mb="24px"
+        justifyContent="space-between"
+        align="center"
+        direction={{ base: "column", md: "row" }}
+      >
+        <Text color={textColor} fontSize="2xl" fontWeight="700" lineHeight="100%">
+          Pacientes
+        </Text>
+        <Flex align="center" gap={4}>
+          <Box
+            borderRadius="10px"
+            bg={bgColor}
+            p="8px"
+            display="flex"
+            alignItems="center"
           >
-            <PlusCircle className="h-5 w-5" weight="fill" />
-            Adicionar Paciente
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm">
-          <div className="p-4">
-            <input
-              type="text"
-              placeholder="Pesquisar Paciente"
+            <Input
+              placeholder="Buscar paciente..."
+              fontSize="sm"
+              py="11px"
+              placeholder-color="gray.400"
+              w={{ base: "100%", md: "258px" }}
+              borderRadius="10px"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              onKeyPress={handleKeyPress}
             />
-          </div>
+            <Button
+              variant="primary"
+              ml={2}
+              p="0px"
+              h="32px"
+              w="32px"
+              onClick={handleSearch}
+            >
+              <Icon h="16px" w="16px" as={FaSearch} />
+            </Button>
+          </Box>
+          <Button
+            variant="primary"
+            leftIcon={<Icon as={FaPlus} h="16px" w="16px" />}
+            onClick={onOpen}
+          >
+            Adicionar
+          </Button>
+        </Flex>
+      </Flex>
 
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Nome</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Nº de Atendimentos</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Último Atendimento</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Criado</th>
-                <th className="w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPatients.map((patient) => (
-                <tr 
-                  key={patient.id} 
-                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white"
-                        style={{ backgroundColor: patient.color }}
+      {loading ? (
+        <Center mt={10}>
+          <Text>Carregando pacientes...</Text>
+        </Center>
+      ) : patients.length === 0 ? (
+        <Center mt={10}>
+          <Text>Nenhum paciente encontrado.</Text>
+        </Center>
+      ) : (
+        <TableContainer bg={bgColor} p={4} borderRadius="10px">
+          <Table variant="simple">
+            <Thead>
+              <Tr>
+                <Th>Nome</Th>
+                <Th>Email</Th>
+                <Th>Telefone</Th>
+                <Th>CPF</Th>
+                <Th>Ações</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {patients.map((patient) => (
+                <Tr key={patient.id}>
+                  <Td>{patient.name}</Td>
+                  <Td>{patient.email}</Td>
+                  <Td>
+                    {patient.phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}
+                  </Td>
+                  <Td>
+                    {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                  </Td>
+                  <Td>
+                    <Flex gap={2}>
+                      <Button
+                        variant="primary"
+                        p="0px"
+                        h="32px"
+                        w="32px"
+                        onClick={() => handleEdit(patient.id)}
                       >
-                        {patient.initials}
-                      </div>
-                      <span className="text-sm text-gray-900">{patient.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{patient.appointments}</td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{patient.lastAppointment || '-'}</td>
-                  <td className="py-3 px-4 text-sm text-gray-900">{patient.createdAt}</td>
-                  <td className="py-3 px-4 relative">
-                    <button
-                      onClick={() => setOpenMenuId(openMenuId === patient.id ? null : patient.id)}
-                      className="p-2 hover:bg-gray-100 rounded-full"
-                    >
-                      <DotsThree className="w-5 h-5 text-gray-400" weight="bold" />
-                    </button>
-                    
-                    {openMenuId === patient.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 py-1 z-50">
-                        <button
-                          onClick={() => {
-                            router.push(`/pacientes/${patient.id}`);
-                            setOpenMenuId(null);
-                          }}
-                          className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <PencilSimple className="w-4 h-4" />
-                          Editar paciente
-                        </button>
-                        <button
-                          className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Power className="w-4 h-4" />
-                          Desativar paciente
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleDeletePatient(patient.id);
-                            setOpenMenuId(null);
-                          }}
-                          className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Trash className="w-4 h-4" />
-                          Excluir paciente
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
+                        <Icon h="16px" w="16px" as={FaPen} />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        p="0px"
+                        h="32px"
+                        w="32px"
+                        onClick={() => handleDelete(patient.id)}
+                      >
+                        <Icon h="16px" w="16px" as={FaTrash} />
+                      </Button>
+                    </Flex>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {showAddModal && (
-        <AddPatientModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddPatient}
-        />
+            </Tbody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+
+      <AddPatientModal isOpen={isOpen} onClose={onClose} />
+    </Box>
   );
 } 

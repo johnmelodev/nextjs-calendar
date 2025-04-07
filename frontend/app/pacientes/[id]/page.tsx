@@ -1,153 +1,335 @@
-'use client';
+"use client";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  Box,
+  Button,
+  Center,
+  Flex,
+  FormControl,
+  FormLabel,
+  Icon,
+  Input,
+  Spinner,
+  Text,
+  useColorModeValue,
+  useToast,
+  VStack,
+} from "@chakra-ui/react";
+import { FaArrowLeft, FaSave, FaTrash } from "react-icons/fa";
+import InputMask from "react-input-mask";
+import { usePatientStore } from "../../stores/patientStore";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Trash } from '@phosphor-icons/react';
+type PatientFormData = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  cpf: string;
+  birthDate: string | null;
+};
 
-export default function PatientPage({ params }: { params: { id: string } }) {
+export default function PatientDetailsPage() {
+  const params = useParams();
+  const patientId = params.id as string;
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    firstName: 'Felipe',
-    lastName: '',
-    birthDate: '',
-    cpf: '23490118870',
-    email: '',
-    phone: ''
+  const toast = useToast();
+  const { fetchPatients, updatePatient, deletePatient, patients } = usePatientStore();
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [formData, setFormData] = useState<PatientFormData>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    cpf: "",
+    birthDate: null,
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleDelete = () => {
-    if (confirm('Tem certeza que deseja excluir este paciente?')) {
-      // Aqui você implementaria a lógica de deleção
-      router.back();
+  useEffect(() => {
+    const loadPatient = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Tentar buscar a lista de pacientes se ainda não estiver carregada
+        if (patients.length === 0) {
+          await fetchPatients();
+        }
+        
+        // Encontrar o paciente pelo ID
+        const patient = patients.find(p => p.id === patientId);
+        
+        if (patient) {
+          setFormData({
+            firstName: patient.firstName,
+            lastName: patient.lastName,
+            email: patient.email,
+            phone: patient.phone,
+            cpf: patient.cpf,
+            birthDate: patient.birthDate,
+          });
+        } else {
+          toast({
+            title: "Paciente não encontrado",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+          router.push("/pacientes");
+        }
+      } catch (error) {
+        console.error("Erro ao carregar paciente:", error);
+        toast({
+          title: "Erro ao carregar paciente",
+          description: "Não foi possível carregar os dados do paciente",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadPatient();
+  }, [patientId, fetchPatients, patients, router, toast]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const formatPhone = (value: string) => {
+    return value.replace(/\D/g, "");
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.firstName) newErrors.firstName = "Primeiro nome é obrigatório";
+    if (!formData.lastName) newErrors.lastName = "Sobrenome é obrigatório";
+    if (!formData.email) newErrors.email = "Email é obrigatório";
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email inválido";
+    if (!formData.phone) newErrors.phone = "Telefone é obrigatório";
+    if (!formData.cpf) newErrors.cpf = "CPF é obrigatório";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const data = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formatPhone(formData.phone),
+        cpf: formData.cpf.replace(/\D/g, ""),
+        birthDate: formData.birthDate,
+      };
+      
+      const result = await updatePatient(patientId, data);
+      
+      if (result) {
+        toast({
+          title: "Paciente atualizado",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar paciente:", error);
+      toast({
+        title: "Erro ao atualizar paciente",
+        description: "Não foi possível atualizar os dados do paciente",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSave = () => {
-    // Aqui você implementaria a lógica de salvamento
-    router.back();
+  const handleDelete = async () => {
+    if (window.confirm("Tem certeza que deseja excluir este paciente?")) {
+      try {
+        setIsLoading(true);
+        
+        const success = await deletePatient(patientId);
+        
+        if (success) {
+          toast({
+            title: "Paciente excluído",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+          router.push("/pacientes");
+        }
+      } catch (error) {
+        console.error("Erro ao excluir paciente:", error);
+        toast({
+          title: "Erro ao excluir paciente",
+          description: "Não foi possível excluir o paciente",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
+  const textColor = useColorModeValue("gray.700", "white");
+  const bgColor = useColorModeValue("white", "gray.800");
+
+  if (isLoading) {
+    return (
+      <Center pt={{ base: "90px", md: "80px", xl: "80px" }} h="50vh">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="px-8 py-6">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.back()}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ←
-            </button>
-            <h1 className="text-2xl text-gray-700 font-medium">
-              Clientes {'>'} Felipe
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleDelete}
-              className="inline-flex items-center gap-2 rounded-full bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600"
-            >
-              <Trash className="w-5 h-5" />
-              Deletar Cliente
-            </button>
-            <button
-              onClick={handleSave}
-              className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
-            >
-              Salvar
-            </button>
-          </div>
-        </div>
+    <Box pt={{ base: "90px", md: "80px", xl: "80px" }}>
+      <Flex mb={6} alignItems="center">
+        <Button
+          variant="outline"
+          leftIcon={<Icon as={FaArrowLeft} />}
+          onClick={() => router.push("/pacientes")}
+          mr={4}
+        >
+          Voltar
+        </Button>
+        <Text fontSize="2xl" fontWeight="700" color={textColor}>
+          Detalhes do Paciente
+        </Text>
+      </Flex>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <div className="grid grid-cols-2 gap-6 max-w-4xl">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Primeiro Nome<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+      <Box bg={bgColor} borderRadius="10px" p={6} shadow="sm">
+        <VStack spacing={6} align="stretch">
+          <Flex gap={4} direction={{ base: "column", md: "row" }}>
+            <FormControl isInvalid={!!errors.firstName} flex="1">
+              <FormLabel>Primeiro Nome</FormLabel>
+              <Input
+                name="firstName"
                 value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                placeholder="Primeiro Nome"
+                onChange={handleChange}
+                placeholder="Digite o primeiro nome"
               />
-            </div>
+              {errors.firstName && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.firstName}
+                </Text>
+              )}
+            </FormControl>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sobrenome<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+            <FormControl isInvalid={!!errors.lastName} flex="1">
+              <FormLabel>Sobrenome</FormLabel>
+              <Input
+                name="lastName"
                 value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                placeholder="Sobrenome"
+                onChange={handleChange}
+                placeholder="Digite o sobrenome"
               />
-            </div>
+              {errors.lastName && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.lastName}
+                </Text>
+              )}
+            </FormControl>
+          </Flex>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                E-mail<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                placeholder="E-mail"
+          <FormControl isInvalid={!!errors.email}>
+            <FormLabel>Email</FormLabel>
+            <Input
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Digite o email"
+              type="email"
+            />
+            {errors.email && (
+              <Text color="red.500" fontSize="sm">
+                {errors.email}
+              </Text>
+            )}
+          </FormControl>
+
+          <Flex gap={4} direction={{ base: "column", md: "row" }}>
+            <FormControl isInvalid={!!errors.phone} flex="1">
+              <FormLabel>Telefone</FormLabel>
+              <Input
+                as={InputMask}
+                mask="(99) 99999-9999"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="(00) 00000-0000"
               />
-            </div>
+              {errors.phone && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.phone}
+                </Text>
+              )}
+            </FormControl>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Telefone<span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-[100px,1fr] gap-2">
-                <select
-                  className="text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                >
-                  <option value="+55">🇧🇷 +55</option>
-                </select>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                  placeholder="Número de Telefone"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                CPF<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+            <FormControl isInvalid={!!errors.cpf} flex="1">
+              <FormLabel>CPF</FormLabel>
+              <Input
+                as={InputMask}
+                mask="999.999.999-99"
+                name="cpf"
                 value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                placeholder="CPF"
+                onChange={handleChange}
+                placeholder="000.000.000-00"
               />
-            </div>
+              {errors.cpf && (
+                <Text color="red.500" fontSize="sm">
+                  {errors.cpf}
+                </Text>
+              )}
+            </FormControl>
+          </Flex>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data de Nascimento
-              </label>
-              <input
-                type="date"
-                value={formData.birthDate}
-                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
-                placeholder="Data de Nascimento"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          <FormControl>
+            <FormLabel>Data de Nascimento</FormLabel>
+            <Input
+              type="date"
+              name="birthDate"
+              value={formData.birthDate || ""}
+              onChange={handleChange}
+            />
+          </FormControl>
+
+          <Flex justify="space-between" mt={4}>
+            <Button
+              colorScheme="red"
+              variant="outline"
+              leftIcon={<Icon as={FaTrash} />}
+              onClick={handleDelete}
+            >
+              Excluir Paciente
+            </Button>
+            <Button
+              colorScheme="blue"
+              leftIcon={<Icon as={FaSave} />}
+              onClick={handleSave}
+            >
+              Salvar Alterações
+            </Button>
+          </Flex>
+        </VStack>
+      </Box>
+    </Box>
   );
 } 
