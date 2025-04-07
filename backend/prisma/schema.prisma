@@ -30,6 +30,7 @@ model Patient {
   phone           String
   cpf             String    @unique
   birthDate       DateTime?
+  color           String?   // Cor para identificação visual no frontend
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   isActive        Boolean   @default(true)
