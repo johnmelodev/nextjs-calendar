@@ -64,17 +64,26 @@ model Professional {
   isActive        Boolean   @default(true)
 }
 
-model Location {
-  id            String   @id @default(uuid())
-  name          String
-  address       String
-  phone         String
-  description   String?
-  workingHours  Json     // Armazenaremos os horários como JSON
-  isActive      Boolean  @default(true)
-  city          String
-  state         String
-  zipCode       String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  services    Service[] // Relacionamento com serviços
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  duration    Int       // Duração em minutos
+  price       Decimal   @db.Decimal(10, 2)
+  color      String    // Cor para identificação visual
+  categoryId  String    // Chave estrangeira para Category
+  category    Category  @relation(fields: [categoryId], references: [id])
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
