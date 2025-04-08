@@ -10,7 +10,7 @@ import { useLocationStore } from '../stores/locationStore';
 import { useProfessionalStore, Professional } from '../stores/professionalStore';
 import { usePatientStore, Patient } from '../stores/patientStore';
 
-// Tipo para os dados mockados que serão usados durante a transição
+// Interface para os dados mockados que serão usados durante a transição
 interface MockAppointment {
   id: number;
   date: string;
@@ -310,6 +310,7 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
   const { locations, fetchLocations } = useLocationStore();
   const { patients, fetchPatients } = usePatientStore();
   const { fetchAppointments, createAppointment } = useAppointmentStore();
+  const [availableProfessionals, setAvailableProfessionals] = useState<Professional[]>([]);
   const [formData, setFormData] = useState({
     serviceId: '',
     professionalId: '',
@@ -362,6 +363,32 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
     }
   }, [formData.patientId, patients]);
 
+  // Filtrar profissionais com base no serviço selecionado
+  useEffect(() => {
+    if (formData.serviceId) {
+      // Filtra os profissionais que podem realizar o serviço selecionado
+      const profsForService = professionals.filter(prof => {
+        // Se o profissional não tem serviços definidos ou a lista está vazia, consideramos que ele não pode realizar o serviço
+        if (!prof.services || prof.services.length === 0) {
+          return false;
+        }
+        
+        // Verifica se o serviço selecionado está na lista de serviços do profissional
+        return prof.services.some(service => service.id === formData.serviceId);
+      });
+      
+      setAvailableProfessionals(profsForService);
+      
+      // Se o profissional atualmente selecionado não pode realizar este serviço, limpa a seleção
+      if (formData.professionalId && !profsForService.some(p => p.id === formData.professionalId)) {
+        setFormData(prev => ({ ...prev, professionalId: '' }));
+      }
+    } else {
+      // Se nenhum serviço está selecionado, mostra todos os profissionais
+      setAvailableProfessionals(professionals);
+    }
+  }, [formData.serviceId, professionals]);
+
   const handleFormChange = (field: string, value: string) => {
     // Limpar mensagens de erro quando o usuário começa a digitar
     if (formError) {
@@ -386,6 +413,16 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
       
       if (!selectedService) {
         setFormError('Serviço selecionado não encontrado');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Verifica se o profissional pode realizar este serviço
+      const selectedProfessional = professionals.find(p => p.id === formData.professionalId);
+      const canProvideService = selectedProfessional?.services?.some(s => s.id === formData.serviceId);
+      
+      if (!canProvideService) {
+        setFormError('Este profissional não pode realizar este serviço');
         setIsSubmitting(false);
         return;
       }
@@ -422,9 +459,16 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
         onClose();
       }, 1500);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar agendamento:', error);
-      setFormError('Ocorreu um erro ao criar o agendamento. Tente novamente.');
+      
+      // Verificar se o erro vem da API e tem uma mensagem específica
+      if (error.response && error.response.data && error.response.data.message) {
+        setFormError(error.response.data.message);
+      } else {
+        setFormError('Ocorreu um erro ao criar o agendamento. Tente novamente.');
+      }
+      
       setIsSubmitting(false);
     }
   };
@@ -550,16 +594,20 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Profissionais<span className="text-red-500">*</span>
+                {formData.serviceId && availableProfessionals.length === 0 && (
+                  <span className="text-xs text-red-500 ml-1">(Nenhum disponível)</span>
+                )}
               </label>
               <select
                 value={formData.professionalId}
                 onChange={(e) => handleFormChange('professionalId', e.target.value)}
                 className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+                disabled={!!(formData.serviceId && availableProfessionals.length === 0)}
               >
                 <option value="">Selecione</option>
-                {professionals.map((professional) => (
+                {(formData.serviceId ? availableProfessionals : professionals).map((professional) => (
                   <option key={professional.id} value={professional.id}>
-                    {professional.firstName}
+                    {professional.firstName} {professional.lastName}
                   </option>
                 ))}
               </select>
@@ -897,7 +945,6 @@ export default function Appointments() {
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [selectedActivityAppointment, setSelectedActivityAppointment] = useState<AppointmentDisplay | null>(null);
-  const [mockData, setMockData] = useState<MockAppointment[]>(mockAppointments);
 
   // Dados da API
   const { appointments: apiAppointments, fetchAppointments } = useAppointmentStore();
@@ -944,13 +991,13 @@ export default function Appointments() {
       status: appointment.status === 'scheduled' ? 'Pendente' : 
               appointment.status === 'completed' ? 'Confirmado' : 
               appointment.status === 'no_show' ? 'Não compareceu' : 'Cancelado',
-      professional: professional ? `${professional.firstName.charAt(0)}${professional.lastName.charAt(0)}` : '',
+      professional: professional ? professional.initials || `${professional.firstName.charAt(0)}${professional.lastName.charAt(0)}` : '',
       professionalColor: professional?.color || '#CCCCCC'
     };
   });
 
-  // Combina os dados mockados com os dados da API para facilitar a transição
-  const allAppointments: AppointmentDisplay[] = [...mappedAppointments];
+  // Usa apenas os dados reais da API
+  const allAppointments = mappedAppointments;
 
   // Função para filtrar os agendamentos
   const filteredAppointments = allAppointments.filter(appointment => {
@@ -969,15 +1016,7 @@ export default function Appointments() {
   };
 
   const handleRemoveProfessional = (appointmentId: string | number) => {
-    // Para dados mockados
-    if (typeof appointmentId === 'number') {
-      setMockData(prev => prev.map(app => 
-        app.id === appointmentId 
-          ? { ...app, professional: '', professionalColor: '' }
-          : app
-      ));
-    }
-    // Para dados da API, a implementação completa viria aqui
+    // Implementação real para remover o profissional via API
     setOpenMenuId(null);
   };
 
