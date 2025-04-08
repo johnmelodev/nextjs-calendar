@@ -50,6 +50,8 @@ export default function Home() {
   const [showAddClientModal, setShowAddClientModal] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
+  const [selectedProfessionals, setSelectedProfessionals] = useState<string[]>([])
 
   // Usar os dados da API através das stores
   const { appointments, fetchAppointments, deleteAppointment } = useAppointmentStore()
@@ -220,13 +222,75 @@ export default function Home() {
     return format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
   }, [currentDate, selectedView])
 
+  function handleOpenAgendamentoModal() {
+    setSelectedDate(new Date())
+    setShowModal(true)
+  }
+
+  const toggleProfessionalFilter = (professionalId: string) => {
+    setSelectedProfessionals(prev => {
+      if (prev.includes(professionalId)) {
+        return prev.filter(id => id !== professionalId)
+      } else {
+        return [...prev, professionalId]
+      }
+    })
+  }
+
+  const toggleServiceFilter = (serviceId: string) => {
+    setSelectedServices(prev => {
+      if (prev.includes(serviceId)) {
+        return prev.filter(id => id !== serviceId)
+      } else {
+        return [...prev, serviceId]
+      }
+    })
+  }
+
+  const getEvents = () => {
+    if (!appointments || appointments.length === 0) {
+      return []
+    }
+    
+    return appointments
+      .filter(appointment => {
+        if (selectedProfessionals.length > 0) {
+          return selectedProfessionals.includes(appointment.professionalId)
+        }
+        return true
+      })
+      .map(appointment => {
+        const service = services.find(s => s.id === appointment.serviceId)
+        const professional = professionals.find(p => p.id === appointment.professionalId)
+        
+        const professionalColor = professional ? professional.color : '#6d28d9'
+        
+        return {
+          id: appointment.id,
+          title: `${service?.name || 'Consulta'} - ${appointment.clientName}`,
+          start: appointment.startTime,
+          end: appointment.endTime,
+          backgroundColor: professionalColor,
+          borderColor: professionalColor,
+          extendedProps: {
+            professional: professional ? `${professional.firstName} ${professional.lastName}` : '',
+            service: service?.name || '',
+            client: appointment.clientName,
+            status: appointment.status,
+            phone: appointment.clientPhone,
+            notes: appointment.notes
+          }
+        }
+      })
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="px-8 py-6">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl text-gray-700 font-medium">Calendário</h1>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={handleOpenAgendamentoModal}
             className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700"
           >
             <PlusCircleIcon className="h-5 w-5" />
@@ -257,7 +321,7 @@ export default function Home() {
                   name={professional.name}
                   color={professional.color}
                   isSelected={selectedProfessional === professional.id}
-                  onClick={() => setSelectedProfessional(professional.id)}
+                  onClick={() => toggleProfessionalFilter(professional.id)}
                 />
               ))}
             </div>
@@ -328,7 +392,7 @@ export default function Home() {
                 initialView={selectedView}
                 headerToolbar={false}
                 dayHeaderFormat={{ weekday: 'long' }}
-                events={filteredEvents as EventSourceInput}
+                events={getEvents()}
                 nowIndicator={true}
                 editable={true}
                 selectable={true}
@@ -460,8 +524,11 @@ export default function Home() {
                         Adicionar Agendamento
                       </Dialog.Title>
                       <AgendamentoForm 
-                        closeModal={handleCloseModal} 
-                        selectedDate={selectedDate} 
+                        initialData={selectedDate ? { date: selectedDate.toISOString().split('T')[0] } : undefined}
+                        onClose={handleCloseModal} 
+                        onSuccess={() => {
+                          fetchAppointments()
+                        }}
                       />
                     </div>
                   </div>

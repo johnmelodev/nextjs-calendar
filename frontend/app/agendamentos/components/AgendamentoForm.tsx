@@ -1,92 +1,84 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
-import { format, parse, parseISO, addMinutes } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { WarningCircle, X } from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CheckCircle, WarningCircle } from '@phosphor-icons/react';
 import { useServiceStore } from '../../stores/serviceStore';
+import { useProfessionalStore, Professional } from '../../stores/professionalStore';
 import { useLocationStore } from '../../stores/locationStore';
-import { useProfessionalStore } from '../../stores/professionalStore';
 import { usePatientStore } from '../../stores/patientStore';
 import { useAppointmentStore, AppointmentInput } from '../../stores/appointmentStore';
 
-// Interface estendida para incluir o patientId para seleção de pacientes
+// Interface estendida que inclui patientId para seleção do paciente
 interface ExtendedAppointmentInput extends Partial<AppointmentInput> {
   patientId?: string;
+  date?: string;
+  time?: string;
 }
 
 interface AgendamentoFormProps {
-  closeModal: () => void;
-  selectedDate?: Date | null;
-  defaultProfessionalId?: string;
+  initialData?: ExtendedAppointmentInput;
+  appointmentId?: string;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function AgendamentoForm({ closeModal, selectedDate, defaultProfessionalId }: AgendamentoFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = useState<string | null>(null);
-  
+const AgendamentoForm: React.FC<AgendamentoFormProps> = ({ 
+  initialData, 
+  appointmentId, 
+  onClose, 
+  onSuccess 
+}) => {
   const { services, fetchServices } = useServiceStore();
-  const { locations, fetchLocations } = useLocationStore();
   const { professionals, fetchProfessionals } = useProfessionalStore();
+  const { locations, fetchLocations } = useLocationStore();
   const { patients, fetchPatients } = usePatientStore();
-  const { createAppointment, fetchAppointments } = useAppointmentStore();
-  
-  const initialFormData: ExtendedAppointmentInput = {
+  const { fetchAppointments, createAppointment, updateAppointment } = useAppointmentStore();
+  const [availableProfessionals, setAvailableProfessionals] = useState<Professional[]>([]);
+
+  const defaultFormData: ExtendedAppointmentInput = {
     serviceId: '',
-    professionalId: defaultProfessionalId || '',
+    professionalId: '',
     locationId: '',
-    patientId: '',
     clientName: '',
     clientPhone: '',
-    startTime: selectedDate ? format(selectedDate, "yyyy-MM-dd'T'HH:mm") : '',
-    endTime: '',
     notes: '',
+    patientId: '',
+    date: '',
+    time: '',
     status: 'scheduled'
   };
-  
-  const [formData, setFormData] = useState<ExtendedAppointmentInput>(initialFormData);
 
-  // Carregar dados
+  const [formData, setFormData] = useState<ExtendedAppointmentInput>(initialData || defaultFormData);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Limpar erros/sucesso quando o componente é desmontado
   useEffect(() => {
-    const loadData = async () => {
-      await Promise.all([
-        fetchServices(), 
-        fetchLocations(), 
-        fetchProfessionals(),
-        fetchPatients()
-      ]);
-    };
-    
-    loadData();
-    
-    // Limpeza ao desmontar
     return () => {
       setFormError(null);
       setFormSuccess(null);
     };
-  }, [fetchServices, fetchLocations, fetchProfessionals, fetchPatients]);
-  
-  // Calcular horário de término com base no serviço selecionado
+  }, []);
+
   useEffect(() => {
-    if (formData.serviceId && formData.startTime) {
-      const selectedService = services.find(s => s.id === formData.serviceId);
-      if (selectedService) {
-        try {
-          const startDate = parseISO(formData.startTime);
-          const endDate = addMinutes(startDate, selectedService.duration);
-          setFormData(prev => ({
-            ...prev,
-            endTime: format(endDate, "yyyy-MM-dd'T'HH:mm")
-          }));
-        } catch (error) {
-          console.error('Erro ao calcular o horário de término:', error);
-        }
+    const loadData = async () => {
+      try {
+        await fetchServices();
+        await fetchLocations();
+        await fetchProfessionals();
+        await fetchPatients();
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
       }
-    }
-  }, [formData.serviceId, formData.startTime, services]);
-  
-  // Definir o paciente quando selecionado
+    };
+    
+    loadData();
+  }, [fetchServices, fetchLocations, fetchProfessionals, fetchPatients]);
+
+  // Atualizar nome e telefone do cliente quando um paciente for selecionado
   useEffect(() => {
     if (formData.patientId) {
       const selectedPatient = patients.find(p => p.id === formData.patientId);
@@ -94,108 +86,235 @@ export default function AgendamentoForm({ closeModal, selectedDate, defaultProfe
         setFormData(prev => ({
           ...prev,
           clientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
-          clientPhone: selectedPatient.phone || ''
+          clientPhone: selectedPatient.phone
         }));
       }
     }
   }, [formData.patientId, patients]);
 
-  // Manipulador do envio do formulário
-  const handleSubmit = async (e: FormEvent) => {
+  // Filtrar profissionais com base no serviço selecionado
+  useEffect(() => {
+    if (formData.serviceId) {
+      // Filtra os profissionais que podem realizar o serviço selecionado
+      const profsForService = professionals.filter(prof => {
+        // Se o profissional não tem serviços definidos ou a lista está vazia, consideramos que ele não pode realizar o serviço
+        if (!prof.services || prof.services.length === 0) {
+          return false;
+        }
+        
+        // Verifica se o serviço selecionado está na lista de serviços do profissional
+        return prof.services.some(service => service.id === formData.serviceId);
+      });
+      
+      setAvailableProfessionals(profsForService);
+      
+      // Se o profissional atualmente selecionado não pode realizar este serviço, limpa a seleção
+      if (formData.professionalId && !profsForService.some(p => p.id === formData.professionalId)) {
+        setFormData(prev => ({ ...prev, professionalId: '' }));
+      }
+    } else {
+      // Se nenhum serviço está selecionado, mostra todos os profissionais
+      setAvailableProfessionals(professionals);
+    }
+  }, [formData.serviceId, professionals]);
+
+  const handleFormChange = (field: string, value: string) => {
+    // Limpar mensagens de erro quando o usuário começa a digitar
+    if (formError) {
+      setFormError(null);
+    }
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Validação
-    if (!formData.serviceId || !formData.professionalId || !formData.locationId || !formData.startTime) {
-      setFormError('Por favor, preencha todos os campos obrigatórios.');
+    if (!validateForm()) {
       return;
     }
-    
-    if (!formData.patientId && (!formData.clientName || !formData.clientPhone)) {
-      setFormError('Informe um paciente cadastrado ou preencha nome e telefone do cliente.');
-      return;
-    }
-    
+  
     try {
       setIsSubmitting(true);
       setFormError(null);
       
-      // Preparar dados para envio - removendo patientId que não é parte da API
+      // Obtém o serviço selecionado para calcular a duração
+      const selectedService = services.find(service => service.id === formData.serviceId);
+      
+      if (!selectedService) {
+        setFormError('Serviço selecionado não encontrado');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Verifica se o profissional pode realizar este serviço
+      const selectedProfessional = professionals.find(p => p.id === formData.professionalId);
+      const canProvideService = selectedProfessional?.services?.some(s => s.id === formData.serviceId);
+      
+      if (!canProvideService) {
+        setFormError('Este profissional não pode realizar este serviço');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Calcula a data e hora de término com base na duração do serviço
+      const endTimeStr = calculateEndTime(formData.date!, formData.time!, selectedService.duration);
+      
+      // Cria o objeto de agendamento no formato esperado pela API
       const appointmentData: AppointmentInput = {
         serviceId: formData.serviceId!,
         professionalId: formData.professionalId!,
         locationId: formData.locationId!,
         clientName: formData.clientName!,
         clientPhone: formData.clientPhone!,
-        startTime: formData.startTime!,
-        endTime: formData.endTime!,
+        startTime: new Date(`${formData.date}T${formData.time}`).toISOString(),
+        endTime: endTimeStr,
         notes: formData.notes || '',
-        status: formData.status as "scheduled" | "completed" | "canceled" | "no_show"
+        status: "scheduled"
       };
       
-      // Criar agendamento
-      await createAppointment(appointmentData);
+      console.log(appointmentId ? 'Atualizando agendamento:' : 'Criando agendamento:', appointmentData);
       
-      // Atualizar lista
+      // Envia para a API
+      if (appointmentId) {
+        await updateAppointment(appointmentId, appointmentData);
+      } else {
+        await createAppointment(appointmentData);
+      }
+      
+      // Recarrega os agendamentos para mostrar o novo registro
       await fetchAppointments();
       
-      // Feedback de sucesso
-      setFormSuccess('Agendamento criado com sucesso!');
+      // Mostra mensagem de sucesso
+      setFormSuccess(appointmentId ? 'Agendamento atualizado com sucesso!' : 'Agendamento criado com sucesso!');
       
-      // Fechar modal após 1.5 segundos
+      // Chama a função de sucesso se fornecida
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // Fecha o modal após um breve atraso para mostrar a mensagem de sucesso
       setTimeout(() => {
-        closeModal();
+        onClose();
       }, 1500);
       
-    } catch (error) {
-      console.error('Erro ao criar agendamento:', error);
-      setFormError('Erro ao criar agendamento. Tente novamente.');
-    } finally {
+    } catch (error: any) {
+      console.error('Erro ao processar agendamento:', error);
+      
+      // Verificar se o erro vem da API e tem uma mensagem específica
+      if (error.response && error.response.data && error.response.data.message) {
+        setFormError(error.response.data.message);
+      } else {
+        setFormError('Ocorreu um erro ao processar o agendamento. Tente novamente.');
+      }
+      
       setIsSubmitting(false);
     }
   };
   
-  // Manipulador de alteração do formulário
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const validateForm = () => {
+    if (!formData.serviceId) {
+      setFormError('Selecione um serviço');
+      return false;
+    }
     
-    // Limpar mensagens de erro quando o usuário começa a digitar
-    if (formError) setFormError(null);
+    if (!formData.professionalId) {
+      setFormError('Selecione um profissional');
+      return false;
+    }
     
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (!formData.locationId) {
+      setFormError('Selecione um local');
+      return false;
+    }
+    
+    if (!formData.date) {
+      setFormError('Selecione uma data');
+      return false;
+    }
+    
+    if (!formData.time) {
+      setFormError('Selecione um horário');
+      return false;
+    }
+    
+    if (!formData.patientId) {
+      setFormError('Selecione um paciente');
+      return false;
+    }
+    
+    setFormError(null);
+    return true;
+  };
+  
+  // Calcular a hora de término com base na duração do serviço
+  const calculateEndTime = (date: string, startTime: string, durationMinutes: number): string => {
+    if (!date || !startTime || !durationMinutes) {
+      throw new Error('Dados insuficientes para calcular o horário de término');
+    }
+    
+    try {
+      const startDateTime = new Date(`${date}T${startTime}`);
+      if (isNaN(startDateTime.getTime())) {
+        throw new Error('Data ou hora de início inválida');
+      }
+      
+      // Adiciona a duração em minutos
+      const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
+      return endDateTime.toISOString();
+    } catch (error) {
+      console.error('Erro ao calcular horário de término:', error);
+      throw new Error('Não foi possível calcular o horário de término');
+    }
   };
 
   return (
-    <div className="bg-white px-4 pb-4 pt-5 sm:p-6">
-      {/* Mensagem de erro */}
+    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto relative">
+      <div className="sticky top-0 flex justify-between items-center bg-white py-2 mb-4 border-b">
+        <h2 className="text-lg font-medium text-gray-900">
+          {appointmentId ? 'Editar agendamento' : 'Adicionar agendamento'}
+        </h2>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-500 p-1">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
       {formError && (
-        <div className="bg-red-50 p-2 rounded-md mb-3 flex items-start gap-2">
-          <WarningCircle className="h-4 w-4 text-red-600 mt-0.5" />
-          <span className="text-xs text-red-700">{formError}</span>
+        <div className="bg-red-50 p-2 rounded-md mb-3 text-xs">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <WarningCircle className="h-4 w-4 text-red-400" aria-hidden="true" />
+            </div>
+            <div className="ml-2">
+              <h3 className="text-xs font-medium text-red-800">{formError}</h3>
+            </div>
+          </div>
         </div>
       )}
-      
-      {/* Mensagem de sucesso */}
+
       {formSuccess && (
-        <div className="bg-green-50 p-2 rounded-md mb-3 flex items-start gap-2">
-          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-          <span className="text-xs text-green-700">{formSuccess}</span>
+        <div className="bg-green-50 p-2 rounded-md mb-3 text-xs">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-4 w-4 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-2">
+              <h3 className="text-xs font-medium text-green-800">{formSuccess}</h3>
+            </div>
+          </div>
         </div>
       )}
-      
-      <form onSubmit={handleSubmit} className="space-y-3">
+
+      <form className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 text-left">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Serviços<span className="text-red-500">*</span>
           </label>
           <select
-            name="serviceId"
-            className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
             value={formData.serviceId}
-            onChange={handleFormChange}
-            required
+            onChange={(e) => handleFormChange('serviceId', e.target.value)}
+            className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
           >
             <option value="">Selecione o serviço</option>
             {services.map((service) => (
@@ -206,102 +325,83 @@ export default function AgendamentoForm({ closeModal, selectedDate, defaultProfe
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 text-left">
-            Profissionais<span className="text-red-500">*</span>
-          </label>
-          <select
-            name="professionalId"
-            className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-            value={formData.professionalId}
-            onChange={handleFormChange}
-            required
-          >
-            <option value="">Selecione o profissional</option>
-            {professionals.map((professional) => (
-              <option key={professional.id} value={professional.id}>
-                {professional.firstName} {professional.lastName}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 text-left">
-            Localização<span className="text-red-500">*</span>
-          </label>
-          <select
-            name="locationId"
-            className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-            value={formData.locationId}
-            onChange={handleFormChange}
-            required
-          >
-            <option value="">Selecione o local</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Profissionais<span className="text-red-500">*</span>
+              {formData.serviceId && availableProfessionals.length === 0 && (
+                <span className="text-xs text-red-500 ml-1">(Nenhum disponível)</span>
+              )}
+            </label>
+            <select
+              value={formData.professionalId}
+              onChange={(e) => handleFormChange('professionalId', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
+              disabled={!!(formData.serviceId && availableProfessionals.length === 0)}
+            >
+              <option value="">Selecione</option>
+              {(formData.serviceId ? availableProfessionals : professionals).map((professional) => (
+                <option key={professional.id} value={professional.id}>
+                  {professional.firstName} {professional.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Localização<span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.locationId}
+              onChange={(e) => handleFormChange('locationId', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
+            >
+              <option value="">Selecione</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 text-left">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Data<span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              name="startTime"
-              className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-              value={formData.startTime ? formData.startTime.split('T')[0] : ''}
-              onChange={(e) => {
-                const newDate = e.target.value;
-                const currentTime = formData.startTime 
-                  ? formData.startTime.split('T')[1] 
-                  : '09:00';
-                setFormData({
-                  ...formData,
-                  startTime: `${newDate}T${currentTime}`
-                });
-              }}
-              required
-            />
+            <div className="relative">
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleFormChange('date', e.target.value)}
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 text-left">
-              Hora<span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Horário<span className="text-red-500">*</span>
             </label>
             <input
               type="time"
-              name="time"
-              className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-              value={formData.startTime ? formData.startTime.split('T')[1] : ''}
-              onChange={(e) => {
-                const currentDate = formData.startTime 
-                  ? formData.startTime.split('T')[0] 
-                  : format(new Date(), 'yyyy-MM-dd');
-                setFormData({
-                  ...formData,
-                  startTime: `${currentDate}T${e.target.value}`
-                });
-              }}
-              required
+              value={formData.time}
+              onChange={(e) => handleFormChange('time', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 text-left">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Paciente<span className="text-red-500">*</span>
           </label>
           <select
-            name="patientId"
-            className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-            value={formData.patientId || ''}
-            onChange={handleFormChange}
+            value={formData.patientId}
+            onChange={(e) => handleFormChange('patientId', e.target.value)}
+            className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
           >
             <option value="">Selecione o paciente</option>
             {patients.map((patient) => (
@@ -312,57 +412,33 @@ export default function AgendamentoForm({ closeModal, selectedDate, defaultProfe
           </select>
         </div>
         
-        {!formData.patientId && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 text-left">
-                Nome do Cliente<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="clientName"
-                className="mt-1 block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                value={formData.clientName || ''}
-                onChange={handleFormChange}
-                placeholder="Nome do cliente"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 text-left">
-                Telefone do Cliente<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                name="clientPhone"
-                className="mt-1 block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                value={formData.clientPhone || ''}
-                onChange={handleFormChange}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-          </>
-        )}
-
         <div>
-          <label className="block text-sm font-medium text-gray-700 text-left">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Observações
           </label>
           <textarea
-            name="notes"
-            rows={3}
-            className="mt-1 block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-            placeholder="As observações não são visíveis para o paciente"
-            value={formData.notes || ''}
-            onChange={handleFormChange}
+            value={formData.notes}
+            onChange={(e) => handleFormChange('notes', e.target.value)}
+            className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
+            rows={2}
+            placeholder="Observações ou instruções"
           />
         </div>
 
-        <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+        <div className="flex justify-end gap-3 pt-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="px-4 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-50 rounded-lg"
+          >
+            Cancelar
+          </button>
           <button
             type="submit"
-            className="inline-flex w-full justify-center rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 sm:col-start-2 disabled:opacity-50"
+            onClick={handleSubmit}
             disabled={isSubmitting}
+            className={`px-4 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg flex items-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {isSubmitting ? (
               <>
@@ -370,20 +446,16 @@ export default function AgendamentoForm({ closeModal, selectedDate, defaultProfe
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Adicionando...
+                {appointmentId ? 'Salvando...' : 'Adicionando...'}
               </>
-            ) : "Adicionar Agendamento"}
-          </button>
-          <button
-            type="button"
-            className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
-            onClick={closeModal}
-            disabled={isSubmitting}
-          >
-            Cancelar
+            ) : (
+              appointmentId ? 'Salvar Alterações' : 'Adicionar Agendamento'
+            )}
           </button>
         </div>
       </form>
     </div>
   );
-} 
+};
+
+export default AgendamentoForm; 
