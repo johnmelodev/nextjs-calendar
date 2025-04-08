@@ -58,15 +58,20 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
   fetchProfessionals: async () => {
     try {
       set({ loading: true, error: null });
-
-      const response = await axios.get(`${API_URL}/professionals`);
-      set({ professionals: response.data, loading: false });
-    } catch (error: any) {
+      const response = await axios.get("http://localhost:3333/professionals");
+      const professionals = response.data;
+      set({ professionals, loading: false });
+      return professionals;
+    } catch (error) {
       console.error("Erro ao buscar profissionais:", error);
       set({
-        error: error.response?.data?.message || "Erro ao buscar profissionais",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erro ao buscar profissionais",
         loading: false,
       });
+      return [];
     }
   },
 

@@ -39,7 +39,7 @@ interface ServiceStore {
   deleteCategory: (id: string) => Promise<void>;
 
   // Ações para serviços
-  fetchServices: () => Promise<void>;
+  fetchServices: () => Promise<Service[]>;
   createService: (
     data: Omit<Service, "id" | "createdAt" | "updatedAt" | "category">
   ) => Promise<void>;
@@ -121,14 +121,23 @@ export const useServiceStore = create<ServiceStore>((set) => ({
 
   // Implementação das ações para serviços
   fetchServices: async () => {
-    set({ loading: true, error: null });
     try {
-      const response = await axios.get<Service[]>(`${API_URL}/services`);
-      console.log("Serviços carregados:", response.data);
-      set((state) => ({ services: response.data, loading: false }));
-    } catch (error: any) {
-      console.error("Erro ao carregar serviços:", error.message);
-      set({ error: "Erro ao carregar serviços", loading: false });
+      set({ loading: true, error: null });
+      const response = await axios.get<Service[]>(
+        "http://localhost:3333/services"
+      );
+      const services = response.data;
+      console.log("Serviços carregados:", services);
+      set({ services, loading: false });
+      return services;
+    } catch (error) {
+      console.error("Erro ao buscar serviços:", error);
+      set({
+        error:
+          error instanceof Error ? error.message : "Erro ao buscar serviços",
+        loading: false,
+      });
+      return [] as Service[];
     }
   },
 

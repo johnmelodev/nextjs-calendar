@@ -39,7 +39,7 @@ interface PatientStore {
   error: string | null;
 
   // Ações
-  fetchPatients: (search?: string) => Promise<Patient[]>;
+  fetchPatients: () => Promise<Patient[]>;
   createPatient: (data: PatientInput) => Promise<Patient | null>;
   updatePatient: (
     id: string,
@@ -103,27 +103,25 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   error: null,
 
   // Buscar todos os pacientes
-  fetchPatients: async (search?: string) => {
-    set({ loading: true, error: null });
+  fetchPatients: async () => {
     try {
-      let url = "http://localhost:3333/patients";
-      if (search) {
-        url += `?search=${encodeURIComponent(search)}`;
-      }
-
-      console.log("Fazendo requisição para:", url);
-      const response = await axios.get<Patient[]>(url);
+      set({ loading: true, error: null });
+      // Log para debug
+      console.log("Fazendo requisição para: http://localhost:3333/patients");
+      const response = await axios.get("http://localhost:3333/patients");
+      // Log para debug
       console.log("Resposta recebida:", response.data);
-
-      const patientsWithCalculatedFields =
-        response.data.map(addCalculatedFields);
-
-      set({ patients: patientsWithCalculatedFields, loading: false });
-      return patientsWithCalculatedFields;
+      const patients = response.data;
+      set({ patients, loading: false });
+      return patients;
     } catch (error) {
       console.error("Erro ao buscar pacientes:", error);
-      set({ error: "Falha ao carregar os pacientes", loading: false });
-      throw error;
+      set({
+        error:
+          error instanceof Error ? error.message : "Erro ao buscar pacientes",
+        loading: false,
+      });
+      return [];
     }
   },
 
