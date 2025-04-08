@@ -23,12 +23,13 @@ export interface Appointment {
     id: string;
     firstName: string;
     lastName: string;
+    initials?: string;
   };
   location?: {
     id: string;
     name: string;
   };
-  createdAt?: string;
+  createdAt: string;
   updatedAt?: string;
 }
 
@@ -67,7 +68,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const response = await axios.get("/api/appointments");
-      const appointments = response.data;
+      const appointments = response.data as Appointment[];
       set({ appointments, loading: false });
       return appointments;
     } catch (error) {
@@ -87,7 +88,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const response = await axios.post("/api/appointments", data);
-      const newAppointment = response.data;
+      const newAppointment = response.data as Appointment;
 
       set((state) => ({
         appointments: [...state.appointments, newAppointment],
@@ -112,7 +113,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const response = await axios.put(`/api/appointments/${id}`, data);
-      const updatedAppointment = response.data;
+      const updatedAppointment = response.data as Appointment;
 
       set((state) => ({
         appointments: state.appointments.map((appointment) =>
@@ -167,7 +168,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
       if (!appointment) {
         set({ loading: true, error: null });
         const response = await axios.get(`/api/appointments/${id}`);
-        appointment = response.data;
+        appointment = response.data as Appointment;
         set({ loading: false });
       }
 

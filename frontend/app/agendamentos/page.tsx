@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PlusCircle, MagnifyingGlass, X, Clock, UserPlus, DotsThree, Activity, UserMinus, Trash, WarningCircle } from '@phosphor-icons/react';
+import { PlusCircle, MagnifyingGlass, X, Clock, UserPlus, DotsThree, Activity, UserMinus, Trash, WarningCircle, PencilSimple } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAppointmentStore, Appointment, AppointmentInput } from '../stores/appointmentStore';
@@ -32,6 +32,7 @@ interface AppointmentDisplay {
   status: string;
   professional: string;
   professionalColor: string;
+  createdAt?: string; // Data de criação do agendamento
 }
 
 // Mock de dados para exemplo - será removido quando conectarmos com a API
@@ -869,6 +870,12 @@ interface ActivityLogModalProps {
 }
 
 const ActivityLogModal = ({ appointment, onClose }: ActivityLogModalProps) => {
+  // Obter a data de criação do agendamento da API
+  const formattedDate = appointment && typeof appointment.id === 'string' && 
+    appointment.createdAt ? 
+    format(new Date(appointment.createdAt), 'dd/MM/yyyy, HH:mm:ss') : 
+    format(new Date(), 'dd/MM/yyyy, HH:mm:ss');
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl p-6 w-[480px] relative" onClick={e => e.stopPropagation()}>
@@ -881,7 +888,7 @@ const ActivityLogModal = ({ appointment, onClose }: ActivityLogModalProps) => {
 
         <div className="space-y-4">
           <div>
-            <div className="text-sm text-gray-500">02/04/2025, 17:58:00</div>
+            <div className="text-sm text-gray-500">{formattedDate}</div>
             <div className="text-sm text-gray-700">criou o agendamento para {appointment.date}</div>
           </div>
         </div>
@@ -902,12 +909,23 @@ const ActivityLogModal = ({ appointment, onClose }: ActivityLogModalProps) => {
 interface DropdownMenuProps {
   onClose: () => void;
   onActivityLog: () => void;
-  onRemoveProfessional: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
-const DropdownMenu = ({ onClose, onActivityLog, onRemoveProfessional }: DropdownMenuProps) => {
+const DropdownMenu = ({ onClose, onActivityLog, onEdit, onDelete }: DropdownMenuProps) => {
   return (
     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 py-1 z-50" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+      >
+        <PencilSimple className="w-4 h-4" />
+        Editar
+      </button>
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -921,12 +939,12 @@ const DropdownMenu = ({ onClose, onActivityLog, onRemoveProfessional }: Dropdown
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onRemoveProfessional();
+          onDelete();
         }}
         className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-gray-50 flex items-center gap-2"
       >
         <Trash className="w-4 h-4" />
-        Excluir profissional
+        Excluir agendamento
       </button>
     </div>
   );
@@ -947,7 +965,7 @@ export default function Appointments() {
   const [selectedActivityAppointment, setSelectedActivityAppointment] = useState<AppointmentDisplay | null>(null);
 
   // Dados da API
-  const { appointments: apiAppointments, fetchAppointments } = useAppointmentStore();
+  const { appointments: apiAppointments, fetchAppointments, deleteAppointment } = useAppointmentStore();
   const { services, fetchServices } = useServiceStore();
   const { locations, fetchLocations } = useLocationStore();
   const { professionals, fetchProfessionals } = useProfessionalStore();
@@ -992,7 +1010,8 @@ export default function Appointments() {
               appointment.status === 'completed' ? 'Confirmado' : 
               appointment.status === 'no_show' ? 'Não compareceu' : 'Cancelado',
       professional: professional ? professional.initials || `${professional.firstName.charAt(0)}${professional.lastName.charAt(0)}` : '',
-      professionalColor: professional?.color || '#CCCCCC'
+      professionalColor: professional?.color || '#CCCCCC',
+      createdAt: appointment.createdAt
     };
   });
 
@@ -1015,8 +1034,27 @@ export default function Appointments() {
     setOpenMenuId(null);
   };
 
-  const handleRemoveProfessional = (appointmentId: string | number) => {
-    // Implementação real para remover o profissional via API
+  const handleEdit = (appointment: AppointmentDisplay) => {
+    setEditingAppointment(appointment);
+    setOpenMenuId(null);
+  };
+
+  const handleDelete = async (appointmentId: string | number) => {
+    if (typeof appointmentId !== 'string') {
+      console.error('ID de agendamento inválido para exclusão');
+      return;
+    }
+    
+    if (window.confirm('Tem certeza que deseja excluir este agendamento?')) {
+      try {
+        await deleteAppointment(appointmentId);
+        // Atualiza a lista de agendamentos após a exclusão
+        await fetchAppointments();
+      } catch (error) {
+        console.error('Erro ao excluir agendamento:', error);
+      }
+    }
+    
     setOpenMenuId(null);
   };
 
@@ -1248,7 +1286,6 @@ export default function Appointments() {
                     {filteredAppointments.map((appointment) => (
                       <tr
                         key={appointment.id}
-                        onClick={() => setEditingAppointment(appointment)}
                         className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
                       >
                         <td className="py-3 px-4 text-sm text-gray-900">{appointment.date}</td>
@@ -1302,7 +1339,8 @@ export default function Appointments() {
                             <DropdownMenu
                               onClose={() => setOpenMenuId(null)}
                               onActivityLog={() => handleActivityLog(appointment)}
-                              onRemoveProfessional={() => handleRemoveProfessional(appointment.id)}
+                              onEdit={() => handleEdit(appointment)}
+                              onDelete={() => handleDelete(appointment.id)}
                             />
                           )}
                         </td>
