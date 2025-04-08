@@ -3,147 +3,174 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { Fragment, useState, useMemo, useRef } from 'react'
+import { Fragment, useState, useMemo, useRef, useEffect } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { CheckIcon, ExclamationTriangleIcon, PlusCircleIcon, UsersIcon } from '@heroicons/react/20/solid'
 import { EventSourceInput } from '@fullcalendar/core/index.js'
 import ptBrLocale from '@fullcalendar/core/locales/pt-br'
 import ProfessionalAvatar from './components/ProfessionalAvatar'
-import { Event, Professional, FilterType, Client } from './types'
+import { Event, Professional as ProfessionalType, FilterType, Client } from './types'
 import AddClientForm from './components/AddClientForm'
 import { CalendarApi } from '@fullcalendar/core'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PlusCircle, X, WarningCircle } from '@phosphor-icons/react'
 import AgendamentoForm from './agendamentos/components/AgendamentoForm'
+import { useAppointmentStore } from './stores/appointmentStore'
+import { useServiceStore } from './stores/serviceStore'
+import { useLocationStore } from './stores/locationStore'
+import { useProfessionalStore, Professional } from './stores/professionalStore'
+import { usePatientStore } from './stores/patientStore'
 
-// Mock data para profissionais
-const professionals: Professional[] = [
+// Mock data para profissionais - será substituído pelos dados da API
+const mockProfessionals: ProfessionalType[] = [
   { id: 'all', name: 'Todos Profissionais', color: '#E2E8F0', initials: 'TP' },
   { id: 'dp', name: 'Dr. Fábio Pizzini', color: '#F8B4D9', initials: 'DP' },
   { id: 'fp', name: 'Fernanda Pereira', color: '#A78BFA', initials: 'FP' },
   { id: 'pg', name: 'Prof. Fábio Gianolla', color: '#BEF264', initials: 'PG' },
 ]
 
-// Mock data para serviços
-const services = [
+// Mock data para serviços - será substituído pelos dados da API
+const mockServices = [
   { id: 'nutri', name: 'Nutri', duration: 60 },
   { id: 'consulta', name: 'Consulta', duration: 45 },
   { id: 'pericia', name: 'Perícia', duration: 30 },
 ]
 
 export default function Home() {
-  const [allEvents, setAllEvents] = useState<Event[]>([])
+  const [allEvents, setAllEvents] = useState<any[]>([])
   const [showModal, setShowModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [idToDelete, setIdToDelete] = useState<number | null>(null)
+  const [idToDelete, setIdToDelete] = useState<string | null>(null)
   const [selectedProfessional, setSelectedProfessional] = useState<FilterType>('all')
-  const [newEvent, setNewEvent] = useState<Event>({
-    id: 0,
-    title: '',
-    start: '',
-    allDay: false,
-    service: '',
-    professionalId: '',
-    location: '',
-    client: '',
-    notes: '',
-    time: ''
-  })
-  const [showAddClientModal, setShowAddClientModal] = useState(false)
-  const [clients, setClients] = useState<Client[]>([])
   const [selectedView, setSelectedView] = useState('dayGridMonth')
   const [currentDate, setCurrentDate] = useState(new Date())
   const calendarRef = useRef<any>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [showAddClientModal, setShowAddClientModal] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Filtra eventos baseado no profissional selecionado
+  // Usar os dados da API através das stores
+  const { appointments, fetchAppointments, deleteAppointment } = useAppointmentStore()
+  const { services, fetchServices } = useServiceStore()
+  const { locations, fetchLocations } = useLocationStore()
+  const { professionals, fetchProfessionals } = useProfessionalStore()
+  const { patients, fetchPatients } = usePatientStore()
+
+  // Carregar os dados da API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true)
+        await fetchServices()
+        await fetchLocations()
+        await fetchProfessionals()
+        await fetchPatients()
+        await fetchAppointments()
+        setIsLoading(false)
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+        setIsLoading(false)
+      }
+    }
+    
+    loadData()
+  }, [fetchServices, fetchLocations, fetchProfessionals, fetchPatients, fetchAppointments])
+
+  // Filtrar eventos baseado no profissional selecionado
   const filteredEvents = useMemo(() => {
     if (selectedProfessional === 'all') {
       return allEvents
     }
-    return allEvents.filter(event => event.professionalId === selectedProfessional)
+    return allEvents.filter(event => event.extendedProps.professionalId === selectedProfessional)
   }, [allEvents, selectedProfessional])
+
+  // Mapear os profissionais da API para o formato usado no calendário
+  const professionalsList = useMemo(() => {
+    const allProfessionals = [
+      { id: 'all', name: 'Todos Profissionais', color: '#E2E8F0', initials: 'TP' },
+    ]
+    
+    const mappedProfessionals = professionals.map(prof => {
+      const initials = `${prof.firstName.charAt(0)}${prof.lastName.charAt(0)}`.toUpperCase()
+      return {
+        id: prof.id,
+        name: `${prof.firstName} ${prof.lastName}`,
+        color: prof.color || '#A78BFA',
+        initials: prof.initials || initials
+      }
+    })
+    
+    return [...allProfessionals, ...mappedProfessionals]
+  }, [professionals])
+
+  // Mapear os agendamentos da API para o formato exigido pelo FullCalendar
+  useEffect(() => {
+    if (appointments.length > 0) {
+      const events = appointments.map(appointment => {
+        const professional = professionals.find(p => p.id === appointment.professionalId)
+        const service = services.find(s => s.id === appointment.serviceId)
+        
+        // Tentativa de encontrar o paciente pelo nome/telefone
+        const patient = patients.find(p => 
+          `${p.firstName} ${p.lastName}` === appointment.clientName || 
+          p.phone === appointment.clientPhone
+        )
+        
+        return {
+          id: appointment.id,
+          title: `${service?.name || 'Consulta'} - ${patient?.firstName || appointment.clientName}`,
+          start: appointment.startTime,
+          end: appointment.endTime,
+          allDay: false,
+          backgroundColor: professional?.color || '#A78BFA',
+          extendedProps: {
+            time: format(parseISO(appointment.startTime), 'HH:mm'),
+            service: service?.name || 'Consulta',
+            duration: service?.duration || 30,
+            professionalId: appointment.professionalId,
+            professional: professional?.firstName || '',
+            professionalInitials: professional?.initials || (professional ? `${professional.firstName.charAt(0)}${professional.lastName.charAt(0)}`.toUpperCase() : ''),
+            professionalColor: professional?.color || '#A78BFA',
+            location: appointment.locationId,
+            patient: patient?.firstName || appointment.clientName,
+            status: appointment.status
+          }
+        }
+      })
+      
+      setAllEvents(events)
+    }
+  }, [appointments, professionals, services, patients])
 
   function handleDateClick(arg: { date: Date, allDay: boolean }) {
     setSelectedDate(arg.date)
     setShowModal(true)
   }
 
-  function handleDeleteModal(data: { event: { id: string } }) {
+  function handleDeleteModal(info: any) {
     setShowDeleteModal(true)
-    setIdToDelete(Number(data.event.id))
+    setIdToDelete(info.event.id)
   }
 
-  function handleDelete() {
-    setAllEvents(allEvents.filter(event => Number(event.id) !== Number(idToDelete)))
-    setShowDeleteModal(false)
-    setIdToDelete(null)
+  async function handleDelete() {
+    if (idToDelete) {
+      try {
+        await deleteAppointment(idToDelete)
+        setShowDeleteModal(false)
+        setIdToDelete(null)
+      } catch (error) {
+        console.error('Erro ao excluir agendamento:', error)
+      }
+    }
   }
 
   function handleCloseModal() {
     setShowModal(false)
-    setNewEvent({
-      id: 0,
-      title: '',
-      start: '',
-      allDay: false,
-      service: '',
-      professionalId: '',
-      location: '',
-      client: '',
-      notes: '',
-      time: ''
-    })
+    setSelectedDate(null)
     setShowDeleteModal(false)
     setIdToDelete(null)
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
-    const value = e.target.value
-    setNewEvent(prev => {
-      const updatedEvent = {
-        ...prev,
-        [e.target.name]: value
-      }
-      
-      // Atualiza a cor do evento baseado no profissional selecionado
-      if (e.target.name === 'professionalId') {
-        const professional = professionals.find(p => p.id === value)
-        if (professional) {
-          updatedEvent.backgroundColor = professional.color
-        }
-      }
-      
-      return updatedEvent
-    })
-  }
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const professional = professionals.find(p => p.id === newEvent.professionalId)
-    const service = services.find(s => s.id === newEvent.service)
-    
-    const event = {
-      ...newEvent,
-      title: `${service?.name} - ${newEvent.client}`,
-      backgroundColor: professional?.color
-    }
-    
-    setAllEvents([...allEvents, event])
-    setShowModal(false)
-    setNewEvent({
-      id: 0,
-      title: '',
-      start: '',
-      allDay: false,
-      service: '',
-      professionalId: '',
-      location: '',
-      client: '',
-      notes: '',
-      time: ''
-    })
   }
 
   const handleAddClient = (newClient: Omit<Client, 'id'>) => {
@@ -224,7 +251,7 @@ export default function Home() {
                   Todos Profissionais
                 </span>
               </div>
-              {professionals.filter(p => p.id !== 'all').map((professional) => (
+              {professionalsList.filter(p => p.id !== 'all').map((professional) => (
                 <ProfessionalAvatar
                   key={professional.id}
                   name={professional.name}
@@ -370,11 +397,11 @@ export default function Home() {
                       </div>
                       <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                         <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
-                          Delete Event
+                          Excluir Agendamento
                         </Dialog.Title>
                         <div className="mt-2">
                           <p className="text-sm text-gray-500">
-                            Are you sure you want to delete this event?
+                            Tem certeza que deseja excluir este agendamento?
                           </p>
                         </div>
                       </div>
@@ -383,13 +410,13 @@ export default function Home() {
                   <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                     <button type="button" className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm 
                     font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto" onClick={handleDelete}>
-                      Delete
+                      Excluir
                     </button>
                     <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 
                     shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
                       onClick={handleCloseModal}
                     >
-                      Cancel
+                      Cancelar
                     </button>
                   </div>
                 </Dialog.Panel>
