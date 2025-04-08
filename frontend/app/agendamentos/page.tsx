@@ -310,7 +310,6 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
   const { locations, fetchLocations } = useLocationStore();
   const { patients, fetchPatients } = usePatientStore();
   const { fetchAppointments, createAppointment } = useAppointmentStore();
-  const [step, setStep] = useState(1); // Controle de passos do formulário
   const [formData, setFormData] = useState({
     serviceId: '',
     professionalId: '',
@@ -369,44 +368,6 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
       setFormError(null);
     }
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // Avançar para o próximo passo do formulário
-  const nextStep = () => {
-    // Validar conforme o passo atual
-    if (step === 1) {
-      if (!formData.serviceId) {
-        setFormError('Selecione um serviço');
-        return;
-      }
-      if (!formData.professionalId) {
-        setFormError('Selecione um profissional');
-        return;
-      }
-      if (!formData.locationId) {
-        setFormError('Selecione um local');
-        return;
-      }
-    } 
-    else if (step === 2) {
-      if (!formData.date) {
-        setFormError('Selecione uma data');
-        return;
-      }
-      if (!formData.time) {
-        setFormError('Selecione um horário');
-        return;
-      }
-    }
-    
-    setFormError(null);
-    setStep(prevStep => prevStep + 1);
-  };
-
-  // Voltar para o passo anterior
-  const prevStep = () => {
-    setFormError(null);
-    setStep(prevStep => prevStep - 1);
   };
 
   const handleSubmit = async (e: React.MouseEvent) => {
@@ -531,33 +492,15 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
           <AddClientForm onClose={() => setShowAddClientForm(false)} />
         )}
 
-        <div className="sticky top-0 flex justify-between items-center bg-white py-2 mb-2 border-b">
+        <div className="sticky top-0 flex justify-between items-center bg-white py-2 mb-4 border-b">
           <h2 className="text-lg font-medium text-gray-900">Adicionar agendamento</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-500 p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Indicador de passos */}
-        <div className="flex mb-3 text-xs">
-          <div className={`flex-1 flex items-center ${step >= 1 ? 'text-violet-600' : 'text-gray-400'}`}>
-            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-violet-100 text-violet-600 font-medium' : 'bg-gray-100'}`}>1</div>
-            <div className="ml-1">Serviço</div>
-            <div className="h-0.5 flex-1 mx-1 bg-gray-200"></div>
-          </div>
-          <div className={`flex-1 flex items-center ${step >= 2 ? 'text-violet-600' : 'text-gray-400'}`}>
-            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-violet-100 text-violet-600 font-medium' : 'bg-gray-100'}`}>2</div>
-            <div className="ml-1">Data</div>
-            <div className="h-0.5 flex-1 mx-1 bg-gray-200"></div>
-          </div>
-          <div className={`flex-1 flex items-center ${step >= 3 ? 'text-violet-600' : 'text-gray-400'}`}>
-            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-violet-100 text-violet-600 font-medium' : 'bg-gray-100'}`}>3</div>
-            <div className="ml-1">Paciente</div>
-          </div>
-        </div>
-
         {formError && (
-          <div className="bg-red-50 p-2 rounded-md mb-3 text-sm">
+          <div className="bg-red-50 p-2 rounded-md mb-4 text-sm">
             <div className="flex">
               <div className="flex-shrink-0">
                 <WarningCircle className="h-4 w-4 text-red-400" aria-hidden="true" />
@@ -570,7 +513,7 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
         )}
 
         {formSuccess && (
-          <div className="bg-green-50 p-2 rounded-md mb-3 text-sm">
+          <div className="bg-green-50 p-2 rounded-md mb-4 text-sm">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-4 w-4 text-green-400" viewBox="0 0 20 20" fill="currentColor">
@@ -584,181 +527,148 @@ const AddAppointmentForm = ({ onClose }: AddAppointmentFormProps) => {
           </div>
         )}
 
-        <form className="space-y-2">
-          {/* Passo 1: Seleção de serviço e profissional */}
-          {step === 1 && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Serviços<span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.serviceId}
-                  onChange={(e) => handleFormChange('serviceId', e.target.value)}
-                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
-                >
-                  <option value="">Selecione o serviço</option>
-                  {services.map((service) => (
-                    <option key={service.id} value={service.id}>
-                      {service.name} ({service.duration}min)
-                    </option>
-                  ))}
-                </select>
-              </div>
+        <form className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Serviços<span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.serviceId}
+              onChange={(e) => handleFormChange('serviceId', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+            >
+              <option value="">Selecione o serviço</option>
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name} ({service.duration}min)
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Profissionais<span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.professionalId}
-                    onChange={(e) => handleFormChange('professionalId', e.target.value)}
-                    className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
-                  >
-                    <option value="">Selecione</option>
-                    {professionals.map((professional) => (
-                      <option key={professional.id} value={professional.id}>
-                        {professional.firstName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Profissionais<span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.professionalId}
+                onChange={(e) => handleFormChange('professionalId', e.target.value)}
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              >
+                <option value="">Selecione</option>
+                {professionals.map((professional) => (
+                  <option key={professional.id} value={professional.id}>
+                    {professional.firstName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Localização<span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.locationId}
-                    onChange={(e) => handleFormChange('locationId', e.target.value)}
-                    className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
-                  >
-                    <option value="">Selecione</option>
-                    {locations.map((location) => (
-                      <option key={location.id} value={location.id}>
-                        {location.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Localização<span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.locationId}
+                onChange={(e) => handleFormChange('locationId', e.target.value)}
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              >
+                <option value="">Selecione</option>
+                {locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-          {/* Passo 2: Data e horário */}
-          {step === 2 && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data<span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => handleFormChange('date', e.target.value)}
-                    className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Horário<span className="text-red-500">*</span>
-                </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data<span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
                 <input
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => handleFormChange('time', e.target.value)}
-                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleFormChange('date', e.target.value)}
+                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
                 />
               </div>
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Horário<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="time"
+                value={formData.time}
+                onChange={(e) => handleFormChange('time', e.target.value)}
+                className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
+          </div>
 
-          {/* Passo 3: Paciente e observações */}
-          {step === 3 && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Paciente<span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.patientId}
-                  onChange={(e) => handleFormChange('patientId', e.target.value)}
-                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
-                >
-                  <option value="">Selecione o paciente</option>
-                  {patients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.firstName} {patient.lastName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Observações
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => handleFormChange('notes', e.target.value)}
-                  className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
-                  rows={2}
-                  placeholder="Observações ou instruções"
-                />
-              </div>
-            </>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Paciente<span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.patientId}
+              onChange={(e) => handleFormChange('patientId', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+            >
+              <option value="">Selecione o paciente</option>
+              {patients.map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.firstName} {patient.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Observações
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => handleFormChange('notes', e.target.value)}
+              className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-violet-500"
+              rows={3}
+              placeholder="Observações ou instruções"
+            />
+          </div>
 
-          <div className="flex justify-end gap-3 pt-2 sticky bottom-0 bg-white border-t py-2 mt-3">
+          <div className="flex justify-end gap-3 pt-4">
             <button
-              type="button" 
+              type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-50 rounded-lg"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-50 rounded-lg"
             >
               Cancelar
             </button>
-            {step > 1 && (
-              <button
-                type="button"
-                onClick={prevStep}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-50 rounded-lg"
-              >
-                Voltar
-              </button>
-            )}
-            
-            {step < 3 ? (
-              <button
-                type="button"
-                onClick={nextStep}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg"
-              >
-                Próximo
-              </button>
-            ) : (
-              <button
-                type="submit"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className={`px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg flex items-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Adicionando...
-                  </>
-                ) : (
-                  'Adicionar'
-                )}
-              </button>
-            )}
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className={`px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg flex items-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Adicionando...
+                </>
+              ) : (
+                'Adicionar Agendamento'
+              )}
+            </button>
           </div>
         </form>
       </div>
