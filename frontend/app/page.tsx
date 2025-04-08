@@ -14,6 +14,8 @@ import AddClientForm from './components/AddClientForm'
 import { CalendarApi } from '@fullcalendar/core'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { PlusCircle, X, WarningCircle } from '@phosphor-icons/react'
+import AgendamentoForm from './agendamentos/components/AgendamentoForm'
 
 // Mock data para profissionais
 const professionals: Professional[] = [
@@ -53,6 +55,7 @@ export default function Home() {
   const [selectedView, setSelectedView] = useState('dayGridMonth')
   const [currentDate, setCurrentDate] = useState(new Date())
   const calendarRef = useRef<any>(null)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
   // Filtra eventos baseado no profissional selecionado
   const filteredEvents = useMemo(() => {
@@ -63,12 +66,7 @@ export default function Home() {
   }, [allEvents, selectedProfessional])
 
   function handleDateClick(arg: { date: Date, allDay: boolean }) {
-    setNewEvent({
-      ...newEvent,
-      start: arg.date,
-      allDay: arg.allDay,
-      id: new Date().getTime()
-    })
+    setSelectedDate(arg.date)
     setShowModal(true)
   }
 
@@ -434,156 +432,10 @@ export default function Home() {
                       <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
                         Adicionar Agendamento
                       </Dialog.Title>
-                      <form action="submit" onSubmit={handleSubmit} className="mt-5">
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 text-left">
-                              Serviços<span className="text-red-500">*</span>
-                            </label>
-                            <select
-                              name="service"
-                              className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                              value={newEvent.service}
-                              onChange={handleChange}
-                              required
-                            >
-                              <option value="">Selecione o serviço</option>
-                              <option value="nutri">Nutri</option>
-                              <option value="consulta">Consulta</option>
-                              <option value="pericia">Pericia</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 text-left">
-                              Profissionais<span className="text-red-500">*</span>
-                            </label>
-                            <select
-                              name="professionalId"
-                              className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                              value={newEvent.professionalId}
-                              onChange={handleChange}
-                              required
-                            >
-                              <option value="">Selecione o profissional</option>
-                              {professionals.filter(p => p.id !== 'all').map((professional) => (
-                                <option key={professional.id} value={professional.id}>
-                                  {professional.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 text-left">
-                                Data<span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                type="date"
-                                name="start"
-                                className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                value={newEvent.start.toString().split('T')[0]}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 text-left">
-                                Hora<span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                name="time"
-                                className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                                value={newEvent.time}
-                                onChange={handleChange}
-                                required
-                              >
-                                <option value="">Selecione a hora</option>
-                                <option value="09:00">09:00</option>
-                                <option value="10:00">10:00</option>
-                                <option value="11:00">11:00</option>
-                                <option value="14:00">14:00</option>
-                                <option value="15:00">15:00</option>
-                                <option value="16:00">16:00</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 text-left">
-                              Localização
-                            </label>
-                            <select
-                              name="location"
-                              className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                              value={newEvent.location}
-                              onChange={handleChange}
-                            >
-                              <option value="">Selecione o local</option>
-                              <option value="sala1">Clínica Dr. Fábio Pizzini</option>
-                            </select>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Clientes
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => setShowAddClientModal(true)}
-                              className="inline-flex items-center px-3 py-1 text-sm font-semibold text-violet-600 hover:text-violet-500"
-                            >
-                              Adicionar Cliente
-                            </button>
-                          </div>
-                          <select
-                            name="client"
-                            className="mt-1 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                            value={newEvent.client}
-                            onChange={handleChange}
-                          >
-                            <option value="">Selecione o cliente</option>
-                            {clients.map((client) => (
-                              <option key={client.id} value={client.id}>
-                                {`${client.firstName} ${client.lastName}`}
-                              </option>
-                            ))}
-                          </select>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 text-left">
-                              Nota
-                            </label>
-                            <textarea
-                              name="notes"
-                              rows={3}
-                              className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6"
-                              placeholder="As notas não são visíveis para o paciente"
-                              value={newEvent.notes}
-                              onChange={handleChange}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                          <button
-                            type="submit"
-                            className="inline-flex w-full justify-center rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 sm:col-start-2 disabled:opacity-25"
-                            disabled={!newEvent.service || !newEvent.professionalId || !newEvent.start || !newEvent.time}
-                          >
-                            Adicionar Agendamento
-                          </button>
-                          <button
-                            type="button"
-                            className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
-                            onClick={handleCloseModal}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </form>
+                      <AgendamentoForm 
+                        closeModal={handleCloseModal} 
+                        selectedDate={selectedDate} 
+                      />
                     </div>
                   </div>
                 </Dialog.Panel>
