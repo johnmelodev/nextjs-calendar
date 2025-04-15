@@ -46,17 +46,17 @@ export const useLocationStore = create<LocationStore>((set) => ({
   fetchLocations: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.get("http://localhost:3333/locations");
+      const response = await axios.get<Location[]>(
+        "http://localhost:3333/locations"
+      );
       const locations = response.data;
       set({ locations, loading: false });
-      return locations;
     } catch (error) {
       console.error("Erro ao buscar locais:", error);
       set({
         error: error instanceof Error ? error.message : "Erro ao buscar locais",
         loading: false,
       });
-      return [];
     }
   },
 
