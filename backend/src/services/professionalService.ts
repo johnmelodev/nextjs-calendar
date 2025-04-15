@@ -19,9 +19,19 @@ export const professionalService = {
           "#" + Math.floor(Math.random() * 16777215).toString(16);
       }
 
-      // Cria o profissional
+      // Cria o profissional com os campos obrigatórios
       const professional = await prisma.professional.create({
-        data: professionalData,
+        data: {
+          firstName: professionalData.firstName,
+          lastName: professionalData.lastName,
+          email: professionalData.email,
+          phone: professionalData.phone,
+          locationId: professionalData.locationId,
+          workingHours: professionalData.workingHours,
+          color: professionalData.color,
+          status: professionalData.status || "disponivel",
+          isActive: professionalData.isActive ?? true,
+        },
       });
 
       // Se foram fornecidos IDs de serviços, cria as relações

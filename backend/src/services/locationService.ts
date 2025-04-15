@@ -36,7 +36,7 @@ export const getLocations = async () => {
 export const getLocation = async (id: string) => {
   const location = await prisma.location.findUnique({
     where: {
-      id,
+      id: String(id),
       isActive: true,
     },
   });
@@ -49,18 +49,27 @@ export const getLocation = async (id: string) => {
 };
 
 export const createLocation = async (data: CreateLocationInput) => {
+  const locationData = {
+    name: data.name,
+    address: data.address,
+    phone: data.phone,
+    description: data.description,
+    workingHours: data.workingHours,
+    city: data.city,
+    state: data.state,
+    zipCode: data.zipCode,
+    isActive: true,
+  };
+
   return prisma.location.create({
-    data: {
-      ...data,
-      isActive: true,
-    },
+    data: locationData,
   });
 };
 
 export const updateLocation = async (id: string, data: UpdateLocationInput) => {
   const location = await prisma.location.findUnique({
     where: {
-      id,
+      id: String(id),
       isActive: true,
     },
   });
@@ -70,7 +79,7 @@ export const updateLocation = async (id: string, data: UpdateLocationInput) => {
   }
 
   return prisma.location.update({
-    where: { id },
+    where: { id: String(id) },
     data,
   });
 };
@@ -78,7 +87,7 @@ export const updateLocation = async (id: string, data: UpdateLocationInput) => {
 export const deleteLocation = async (id: string) => {
   const location = await prisma.location.findUnique({
     where: {
-      id,
+      id: String(id),
       isActive: true,
     },
   });
@@ -88,7 +97,7 @@ export const deleteLocation = async (id: string) => {
   }
 
   return prisma.location.update({
-    where: { id },
+    where: { id: String(id) },
     data: {
       isActive: false,
     },
