@@ -11,8 +11,10 @@ const app = express();
 // Configuração do CORS para aceitar requisições do frontend
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000", // URL do frontend local
-  "https://nextjs-calendar-frontend.vercel.app", // URL do frontend na Vercel (ajuste para sua URL)
+  "https://nextjs-calendar-16ox-ten.vercel.app", // URL do frontend na Vercel
+  "https://nextjs-calendar-frontend.vercel.app", // URL alternativa do frontend
   /\.vercel\.app$/, // Aceita qualquer subdomínio da Vercel
+  /\.railway\.app$/, // Aceita qualquer subdomínio do Railway
 ];
 
 app.use(
