@@ -13,7 +13,7 @@ export const validateRequest = (schema: AnyZodObject) => {
           path: err.path.join("."),
           message: err.message,
         }));
-        throw new AppError(400, JSON.stringify(errors));
+        throw new AppError(JSON.stringify(errors), 400);
       }
       throw error;
     }
