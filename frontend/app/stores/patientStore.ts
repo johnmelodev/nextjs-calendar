@@ -39,7 +39,7 @@ interface PatientStore {
   error: string | null;
 
   // Ações
-  fetchPatients: () => Promise<Patient[]>;
+  fetchPatients: (searchTerm?: string) => Promise<Patient[]>;
   createPatient: (data: PatientInput) => Promise<Patient | null>;
   updatePatient: (
     id: string,
@@ -103,15 +103,30 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   error: null,
 
   // Buscar todos os pacientes
-  fetchPatients: async () => {
+  fetchPatients: async (searchTerm?: string): Promise<Patient[]> => {
     try {
       set({ loading: true, error: null });
       // Log para debug
       console.log("Fazendo requisição para: http://localhost:3333/patients");
-      const response = await axios.get("http://localhost:3333/patients");
+      const response = await axios.get<Patient[]>(
+        "http://localhost:3333/patients"
+      );
       // Log para debug
       console.log("Resposta recebida:", response.data);
-      const patients = response.data;
+      let patients = response.data;
+
+      // Filtrar pacientes se houver termo de busca
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        patients = patients.filter(
+          (patient: Patient) =>
+            patient.firstName.toLowerCase().includes(searchLower) ||
+            patient.lastName.toLowerCase().includes(searchLower) ||
+            patient.email.toLowerCase().includes(searchLower) ||
+            patient.cpf.includes(searchTerm)
+        );
+      }
+
       set({ patients, loading: false });
       return patients;
     } catch (error) {
