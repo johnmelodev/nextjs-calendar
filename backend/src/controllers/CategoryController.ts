@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   createCategorySchema,
   updateCategorySchema,
@@ -12,8 +12,14 @@ export class CategoryController {
   async create(req: Request, res: Response) {
     const validatedData = createCategorySchema.parse(req.body);
 
+    const createData: Prisma.CategoryCreateInput = {
+      name: validatedData.name,
+      description: validatedData.description,
+      isActive: validatedData.isActive ?? true,
+    };
+
     const category = await prisma.category.create({
-      data: validatedData,
+      data: createData,
     });
 
     return res.status(201).json(category);
@@ -35,9 +41,15 @@ export class CategoryController {
     const { id } = req.params;
     const validatedData = updateCategorySchema.parse(req.body);
 
+    const updateData: Prisma.CategoryUpdateInput = {
+      name: validatedData.name,
+      description: validatedData.description,
+      isActive: validatedData.isActive,
+    };
+
     const category = await prisma.category.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
     });
 
     return res.json(category);

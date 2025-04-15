@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   createServiceSchema,
   updateServiceSchema,
@@ -15,8 +15,20 @@ export class ServiceController {
       const validatedData = createServiceSchema.parse(req.body);
       console.log("Dados validados:", validatedData);
 
+      const createData: Prisma.ServiceCreateInput = {
+        name: validatedData.name,
+        description: validatedData.description,
+        price: validatedData.price,
+        duration: validatedData.duration,
+        color: validatedData.color,
+        category: {
+          connect: { id: validatedData.categoryId },
+        },
+        isActive: validatedData.isActive ?? true,
+      };
+
       const service = await prisma.service.create({
-        data: validatedData,
+        data: createData,
         include: {
           category: true,
         },
@@ -26,7 +38,7 @@ export class ServiceController {
       return res.status(201).json(service);
     } catch (error) {
       console.error("Erro ao criar serviço:", error);
-      throw error; // O middleware de erro tratará isso
+      throw error;
     }
   }
 
@@ -59,9 +71,23 @@ export class ServiceController {
       const validatedData = updateServiceSchema.parse(req.body);
       console.log("Dados validados:", validatedData);
 
+      const updateData: Prisma.ServiceUpdateInput = {
+        name: validatedData.name,
+        description: validatedData.description,
+        price: validatedData.price,
+        duration: validatedData.duration,
+        color: validatedData.color,
+        category: validatedData.categoryId
+          ? {
+              connect: { id: validatedData.categoryId },
+            }
+          : undefined,
+        isActive: validatedData.isActive,
+      };
+
       const service = await prisma.service.update({
         where: { id },
-        data: validatedData,
+        data: updateData,
         include: {
           category: true,
         },
