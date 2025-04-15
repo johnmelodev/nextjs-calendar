@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axios from "axios";
+import { API_URL } from "../config/api";
 
 // Interface para o paciente
 export interface Patient {
@@ -107,10 +108,8 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       // Log para debug
-      console.log("Fazendo requisição para: http://localhost:3333/patients");
-      const response = await axios.get<Patient[]>(
-        "http://localhost:3333/patients"
-      );
+      console.log("Fazendo requisição para:", `${API_URL}/patients`);
+      const response = await axios.get<Patient[]>(`${API_URL}/patients`);
       // Log para debug
       console.log("Resposta recebida:", response.data);
       let patients = response.data;
@@ -144,10 +143,7 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   createPatient: async (data: PatientInput) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.post<Patient>(
-        "http://localhost:3333/patients",
-        data
-      );
+      const response = await axios.post<Patient>(`${API_URL}/patients`, data);
       const newPatient = addCalculatedFields(response.data);
 
       set((state) => ({
@@ -168,7 +164,7 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await axios.put<Patient>(
-        `http://localhost:3333/patients/${id}`,
+        `${API_URL}/patients/${id}`,
         data
       );
       const updatedPatient = addCalculatedFields(response.data);
@@ -190,7 +186,7 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   deletePatient: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      await axios.delete(`http://localhost:3333/patients/${id}`);
+      await axios.delete(`${API_URL}/patients/${id}`);
 
       set((state) => ({
         patients: state.patients.filter((p) => p.id !== id),
@@ -207,6 +203,6 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
 
   // Buscar um paciente pelo ID
   getPatientById: (id: string) => {
-    return get().patients.find((patient) => patient.id === id);
+    return get().patients.find((p) => p.id === id);
   },
 }));

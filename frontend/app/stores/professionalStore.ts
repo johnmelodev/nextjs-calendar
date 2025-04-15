@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import axios from "axios";
-
-// URL base da API
-const API_URL = "http://localhost:3333";
+import { API_URL } from "../config/api";
 
 // Interface para o profissional
 export interface Professional {
@@ -59,7 +57,7 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const response = await axios.get<Professional[]>(
-        "http://localhost:3333/professionals"
+        `${API_URL}/professionals`
       );
       const professionals = response.data;
       set({ professionals, loading: false });
@@ -80,7 +78,6 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      // Formata os dados para a API
       const professionalData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -98,7 +95,6 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         professionalData
       );
 
-      // Atualiza a lista de profissionais
       set((state) => ({
         professionals: [...state.professionals, response.data],
         loading: false,
@@ -120,7 +116,6 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      // Formata os dados para a API
       const professionalData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -138,7 +133,6 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         professionalData
       );
 
-      // Atualiza a lista de profissionais
       set((state) => ({
         professionals: state.professionals.map((prof) =>
           prof.id === id ? response.data : prof
@@ -165,7 +159,6 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
 
       await axios.delete(`${API_URL}/professionals/${id}`);
 
-      // Remove o profissional da lista
       set((state) => ({
         professionals: state.professionals.filter((prof) => prof.id !== id),
         loading: false,
