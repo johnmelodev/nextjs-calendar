@@ -58,10 +58,11 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
   fetchProfessionals: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.get("http://localhost:3333/professionals");
+      const response = await axios.get<Professional[]>(
+        "http://localhost:3333/professionals"
+      );
       const professionals = response.data;
       set({ professionals, loading: false });
-      return professionals;
     } catch (error) {
       console.error("Erro ao buscar profissionais:", error);
       set({
@@ -71,12 +72,11 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
             : "Erro ao buscar profissionais",
         loading: false,
       });
-      return [];
     }
   },
 
   // Criar um novo profissional
-  createProfessional: async (data) => {
+  createProfessional: async (data): Promise<Professional> => {
     try {
       set({ loading: true, error: null });
 
@@ -93,7 +93,7 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         workingHours: data.workingHours,
       };
 
-      const response = await axios.post(
+      const response = await axios.post<Professional>(
         `${API_URL}/professionals`,
         professionalData
       );
@@ -116,7 +116,7 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
   },
 
   // Atualizar um profissional existente
-  updateProfessional: async (id, data) => {
+  updateProfessional: async (id, data): Promise<Professional> => {
     try {
       set({ loading: true, error: null });
 
@@ -133,7 +133,7 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         workingHours: data.workingHours,
       };
 
-      const response = await axios.put(
+      const response = await axios.put<Professional>(
         `${API_URL}/professionals/${id}`,
         professionalData
       );
@@ -181,11 +181,13 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
   },
 
   // Buscar um profissional pelo ID
-  getProfessionalById: async (id) => {
+  getProfessionalById: async (id): Promise<Professional> => {
     try {
       set({ loading: true, error: null });
 
-      const response = await axios.get(`${API_URL}/professionals/${id}`);
+      const response = await axios.get<Professional>(
+        `${API_URL}/professionals/${id}`
+      );
       set({ loading: false });
 
       return response.data;
