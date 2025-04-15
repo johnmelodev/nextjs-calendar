@@ -9,7 +9,7 @@ export const createProfessionalSchema = z.object({
   email: z.string().email("E-mail inválido"),
   phone: z.string().min(10, "O telefone deve ter pelo menos 10 dígitos"),
   locationId: z.string().optional(),
-  workingHours: z.record(z.string(), z.any()).optional(),
+  workingHours: z.record(z.any()).optional(),
   color: z.string().optional(),
   serviceIds: z.array(z.string()).optional(),
   status: z.enum(["disponivel", "indisponivel"]).default("disponivel"),
@@ -24,7 +24,7 @@ export const professionalFilterSchema = z.object({
   isActive: z.boolean().optional(),
   locationId: z.string().optional(),
   serviceId: z.string().optional(),
-  status: z.string().optional(),
+  status: z.enum(["disponivel", "indisponivel"]).optional(),
 });
 
 // Tipos derivados dos schemas

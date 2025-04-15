@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   CreateProfessionalInput,
   UpdateProfessionalInput,
@@ -20,18 +20,22 @@ export const professionalService = {
       }
 
       // Cria o profissional com os campos obrigatórios
+      const createData: Prisma.ProfessionalCreateInput = {
+        firstName: professionalData.firstName,
+        lastName: professionalData.lastName,
+        email: professionalData.email,
+        phone: professionalData.phone,
+        location: professionalData.locationId
+          ? { connect: { id: professionalData.locationId } }
+          : undefined,
+        workingHours: professionalData.workingHours as Prisma.JsonValue,
+        color: professionalData.color,
+        status: professionalData.status || "disponivel",
+        isActive: professionalData.isActive ?? true,
+      };
+
       const professional = await prisma.professional.create({
-        data: {
-          firstName: professionalData.firstName,
-          lastName: professionalData.lastName,
-          email: professionalData.email,
-          phone: professionalData.phone,
-          locationId: professionalData.locationId,
-          workingHours: professionalData.workingHours,
-          color: professionalData.color,
-          status: professionalData.status || "disponivel",
-          isActive: professionalData.isActive ?? true,
-        },
+        data: createData,
       });
 
       // Se foram fornecidos IDs de serviços, cria as relações
