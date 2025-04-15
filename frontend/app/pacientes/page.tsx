@@ -209,7 +209,7 @@ export default function PacientesPage() {
 
   // Carregar dados ao montar o componente
   useEffect(() => {
-    fetchPatients();
+    fetchPatients(undefined);
   }, [fetchPatients]);
 
   // Função para pesquisar pacientes
