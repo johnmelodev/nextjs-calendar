@@ -70,6 +70,18 @@ const AgendamentoForm: React.FC<AgendamentoFormProps> = ({
         await fetchLocations();
         await fetchProfessionals();
         await fetchPatients();
+        
+        // Adicionar logs para debug
+        console.log('Dados carregados:');
+        console.log('- Serviços:', services.length);
+        console.log('- Locais:', locations.length);
+        console.log('- Profissionais:', professionals.length);
+        console.log('- Pacientes:', patients.length);
+        
+        if (professionals.length > 0) {
+          console.log('Exemplo de profissional:', professionals[0]);
+          console.log('Serviços do profissional:', professionals[0].services);
+        }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
       }
@@ -97,9 +109,10 @@ const AgendamentoForm: React.FC<AgendamentoFormProps> = ({
     if (formData.serviceId) {
       // Filtra os profissionais que podem realizar o serviço selecionado
       const profsForService = professionals.filter(prof => {
-        // Se o profissional não tem serviços definidos ou a lista está vazia, consideramos que ele não pode realizar o serviço
+        // Se o profissional não tem serviços definidos ou a lista está vazia
         if (!prof.services || prof.services.length === 0) {
-          return false;
+          // Permitir que todos os profissionais apareçam mesmo sem serviços
+          return true;
         }
         
         // Verifica se o serviço selecionado está na lista de serviços do profissional
@@ -142,16 +155,6 @@ const AgendamentoForm: React.FC<AgendamentoFormProps> = ({
       
       if (!selectedService) {
         setFormError('Serviço selecionado não encontrado');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Verifica se o profissional pode realizar este serviço
-      const selectedProfessional = professionals.find(p => p.id === formData.professionalId);
-      const canProvideService = selectedProfessional?.services?.some(s => s.id === formData.serviceId);
-      
-      if (!canProvideService) {
-        setFormError('Este profissional não pode realizar este serviço');
         setIsSubmitting(false);
         return;
       }
@@ -329,18 +332,21 @@ const AgendamentoForm: React.FC<AgendamentoFormProps> = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Profissionais<span className="text-red-500">*</span>
-              {formData.serviceId && availableProfessionals.length === 0 && (
-                <span className="text-xs text-red-500 ml-1">(Nenhum disponível)</span>
+              {formData.serviceId && availableProfessionals.length === 0 && professionals.length > 0 && (
+                <span className="text-xs text-yellow-500 ml-1">(Nenhum profissional tem este serviço configurado)</span>
+              )}
+              {professionals.length === 0 && (
+                <span className="text-xs text-red-500 ml-1">(Nenhum profissional cadastrado)</span>
               )}
             </label>
             <select
               value={formData.professionalId}
               onChange={(e) => handleFormChange('professionalId', e.target.value)}
               className="w-full text-sm border-0 ring-1 ring-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-violet-500"
-              disabled={!!(formData.serviceId && availableProfessionals.length === 0)}
+              disabled={professionals.length === 0}
             >
               <option value="">Selecione</option>
-              {(formData.serviceId ? availableProfessionals : professionals).map((professional) => (
+              {(availableProfessionals.length > 0 ? availableProfessionals : professionals).map((professional) => (
                 <option key={professional.id} value={professional.id}>
                   {professional.firstName} {professional.lastName}
                 </option>
