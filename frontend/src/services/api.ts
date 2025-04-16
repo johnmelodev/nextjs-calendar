@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL:
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://nextjs-calendar-production.up.railway.app",
   headers: {
     "Content-Type": "application/json",
   },
@@ -23,6 +25,13 @@ api.interceptors.response.use(
     }
     return Promise.reject(error);
   }
+);
+
+// Log para debug - remover depois
+console.log(
+  "API URL:",
+  process.env.NEXT_PUBLIC_API_URL ||
+    "https://nextjs-calendar-production.up.railway.app"
 );
 
 export default api;
