@@ -21,6 +21,7 @@ import { useServiceStore } from './stores/serviceStore'
 import { useLocationStore } from './stores/locationStore'
 import { useProfessionalStore, Professional } from './stores/professionalStore'
 import { usePatientStore } from './stores/patientStore'
+import { checkApiConfig, setupApiMonitor } from '../src/services/checkApi'
 
 // Mock data para profissionais - será substituído pelos dados da API
 const mockProfessionals: ProfessionalType[] = [
@@ -79,6 +80,17 @@ export default function Home() {
     
     loadData()
   }, [fetchServices, fetchLocations, fetchProfessionals, fetchPatients, fetchAppointments])
+
+  useEffect(() => {
+    // Verificar e corrigir a URL da API no carregamento da página
+    const apiStatus = checkApiConfig();
+    if (apiStatus.fixed) {
+      console.log('URL da API corrigida no carregamento da página principal:', apiStatus.newUrl);
+    }
+    
+    // Configurar o monitoramento da API
+    setupApiMonitor();
+  }, []);
 
   // Filtrar eventos baseado no profissional selecionado
   const filteredEvents = useMemo(() => {

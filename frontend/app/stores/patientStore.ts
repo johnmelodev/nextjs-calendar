@@ -29,6 +29,7 @@ export interface PatientInput {
   phone: string;
   cpf: string;
   birthDate?: string | null;
+  isActive?: boolean;
 }
 
 // Interface para a store de pacientes
@@ -40,9 +41,7 @@ interface PatientStore {
 
   // Ações
   fetchPatients: (searchTerm?: string) => Promise<void>;
-  createPatient: (
-    data: Omit<Patient, "id" | "createdAt" | "updatedAt">
-  ) => Promise<void>;
+  createPatient: (data: PatientInput) => Promise<void>;
   updatePatient: (id: string, data: Partial<Patient>) => Promise<void>;
   deletePatient: (id: string) => Promise<void>;
   getPatientById: (id: string) => Patient | undefined;
@@ -124,7 +123,13 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   createPatient: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post<Patient>("/patients", data);
+      // Garantir que isActive seja definido ao criar um novo paciente
+      const patientData = {
+        ...data,
+        isActive: data.isActive !== undefined ? data.isActive : true,
+      };
+
+      const response = await api.post<Patient>("/patients", patientData);
       const newPatient = addCalculatedFields(response.data);
 
       set((state) => ({
