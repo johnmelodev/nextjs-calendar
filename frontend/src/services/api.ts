@@ -1,9 +1,36 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL:
+// Função para obter a URL correta da API
+function getApiUrl() {
+  // Verificar se temos uma URL global definida (do script no layout.tsx)
+  const globalApiUrl =
+    typeof window !== "undefined" ? (window as any).NEXT_PUBLIC_API_URL : null;
+
+  // Verificar se temos uma URL no localStorage
+  const storedApiUrl =
+    typeof window !== "undefined" ? localStorage.getItem("api_url") : null;
+
+  // Prioridade: 1. Global, 2. localStorage, 3. env, 4. URL padrão
+  return (
+    globalApiUrl ||
+    storedApiUrl ||
     process.env.NEXT_PUBLIC_API_URL ||
-    "https://nextjs-calendar-production.up.railway.app",
+    "https://nextjs-calendar-production.up.railway.app"
+  );
+}
+
+// Configuração da URL da API com fallback para Railway
+const apiUrl = getApiUrl();
+
+// Garantir que não estamos usando localhost
+const finalApiUrl = apiUrl.includes("localhost")
+  ? "https://nextjs-calendar-production.up.railway.app"
+  : apiUrl;
+
+console.log("API URL configurada:", finalApiUrl);
+
+const api = axios.create({
+  baseURL: finalApiUrl,
   headers: {
     "Content-Type": "application/json",
   },
@@ -18,7 +45,9 @@ api.interceptors.response.use(
       console.error("Erro na API:", error.response.data);
     } else if (error.request) {
       // A requisição foi feita mas não houve resposta
-      console.error("Sem resposta do servidor");
+      console.error("Sem resposta do servidor:", error.request);
+      console.error("URL da requisição:", error.config?.url);
+      console.error("URL base configurada:", finalApiUrl);
     } else {
       // Algo aconteceu na configuração da requisição
       console.error("Erro na configuração da requisição:", error.message);
@@ -27,11 +56,23 @@ api.interceptors.response.use(
   }
 );
 
-// Log para debug - remover depois
-console.log(
-  "API URL:",
-  process.env.NEXT_PUBLIC_API_URL ||
-    "https://nextjs-calendar-production.up.railway.app"
+// Interceptor para evitar URLs com localhost
+api.interceptors.request.use(
+  (config) => {
+    // Se a URL contém 'localhost', substitua pela URL correta
+    if (config.url && config.url.includes("localhost")) {
+      console.warn("Interceptando URL com localhost:", config.url);
+      config.url = config.url.replace(
+        /https?:\/\/localhost:[0-9]+/g,
+        finalApiUrl
+      );
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
 export default api;

@@ -41,6 +41,10 @@ const nextConfig = {
   images: {
     domains: ["nextjs-calendar-production.up.railway.app"],
   },
+  // Garantir que não haja redirecionamentos para localhost
+  env: {
+    NEXT_PUBLIC_API_URL: "https://nextjs-calendar-production.up.railway.app",
+  },
 };
 
 module.exports = nextConfig;

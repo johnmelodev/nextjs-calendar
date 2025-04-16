@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { PlusCircle, PencilSimple, Trash } from '@phosphor-icons/react';
 import { useServiceStore } from '../stores/serviceStore';
+import ApiErrorMessage from "../components/ApiErrorMessage";
 
 interface AddCategoryModalProps {
   onClose: () => void;
@@ -303,17 +304,15 @@ export default function ServicosPage() {
     await fetchServices(); // Recarrega os serviços após deletar
   };
 
+  const handleRetryConnection = () => {
+    // Tentar reconectar à API
+    fetchCategories();
+    fetchServices();
+  };
+
   const filteredServices = selectedCategory
     ? services.filter(service => service.categoryId === selectedCategory)
     : services;
-
-  if (loading) {
-    return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Carregando...</div>;
-  }
-
-  if (error) {
-    return <div className="min-h-screen bg-gray-100 p-6 text-red-600">Erro: {error}</div>;
-  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -328,6 +327,14 @@ export default function ServicosPage() {
             Adicionar Serviço
           </button>
         </div>
+
+        {/* Exibir mensagem de erro se houver */}
+        {error && (
+          <ApiErrorMessage 
+            error={error} 
+            onRetry={handleRetryConnection}
+          />
+        )}
 
         <div className="grid grid-cols-[280px,1fr] gap-6">
           <div className="bg-gray-50 rounded-2xl p-6">

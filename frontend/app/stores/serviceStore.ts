@@ -1,5 +1,18 @@
 import { create } from "zustand";
 import api from "../../src/services/api";
+import { checkApiConfig, setupApiMonitor } from "../../src/services/checkApi";
+
+// Configurar o monitoramento de API se estiver no navegador
+if (typeof window !== "undefined") {
+  // Verificar e corrigir a configuração da API
+  const apiCheck = checkApiConfig();
+  if (apiCheck.fixed) {
+    console.log("API URL corrigida:", apiCheck.newUrl);
+  }
+
+  // Configurar interceptores
+  setupApiMonitor();
+}
 
 interface Category {
   id: string;
@@ -57,12 +70,31 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   fetchCategories: async () => {
     set({ loading: true, error: null });
     try {
+      // Garantir que a API está configurada corretamente
+      if (typeof window !== "undefined") {
+        checkApiConfig();
+      }
+
+      console.log("Buscando categorias da API...");
       const response = await api.get<Category[]>("/categories");
       console.log("Categorias carregadas:", response.data);
       set((state) => ({ categories: response.data, loading: false }));
     } catch (error: any) {
       console.error("Erro ao carregar categorias:", error.message);
-      set({ error: "Erro ao carregar categorias", loading: false });
+
+      // Tratamento específico para erro de conexão recusada
+      if (error.message && error.message.includes("ECONNREFUSED")) {
+        console.error(
+          "Erro de conexão recusada. Verifique se a API está online."
+        );
+        set({
+          error:
+            "Erro de conexão com o servidor. Verifique sua conexão de internet.",
+          loading: false,
+        });
+      } else {
+        set({ error: "Erro ao carregar categorias", loading: false });
+      }
     }
   },
 
@@ -115,18 +147,39 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   fetchServices: async () => {
     try {
       set({ loading: true, error: null });
+
+      // Garantir que a API está configurada corretamente
+      if (typeof window !== "undefined") {
+        checkApiConfig();
+      }
+
+      console.log("Buscando serviços da API...");
       const response = await api.get<Service[]>("/services");
       const services = response.data;
       console.log("Serviços carregados:", services);
       set({ services, loading: false });
       return services;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar serviços:", error);
-      set({
-        error:
-          error instanceof Error ? error.message : "Erro ao buscar serviços",
-        loading: false,
-      });
+
+      // Tratamento específico para erro de conexão recusada
+      if (error.message && error.message.includes("ECONNREFUSED")) {
+        console.error(
+          "Erro de conexão recusada. Verifique se a API está online."
+        );
+        set({
+          error:
+            "Erro de conexão com o servidor. Verifique sua conexão de internet.",
+          loading: false,
+        });
+      } else {
+        set({
+          error:
+            error instanceof Error ? error.message : "Erro ao buscar serviços",
+          loading: false,
+        });
+      }
+
       return [] as Service[];
     }
   },

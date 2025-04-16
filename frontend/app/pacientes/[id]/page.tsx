@@ -120,10 +120,9 @@ export default function PatientDetailsPage() {
 
   const handleSave = async () => {
     if (!validate()) return;
-    
+
     try {
       setIsLoading(true);
-      
       const data = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -133,15 +132,17 @@ export default function PatientDetailsPage() {
         birthDate: formData.birthDate,
       };
       
-      const result = await updatePatient(patientId, data);
-      
-      if (result) {
+      try {
+        await updatePatient(patientId, data);
         toast({
           title: "Paciente atualizado",
           status: "success",
           duration: 3000,
           isClosable: true,
         });
+      } catch (error) {
+        // O erro já será tratado pelo try/catch externo
+        throw error;
       }
     } catch (error) {
       console.error("Erro ao atualizar paciente:", error);
@@ -162,9 +163,8 @@ export default function PatientDetailsPage() {
       try {
         setIsLoading(true);
         
-        const success = await deletePatient(patientId);
-        
-        if (success) {
+        try {
+          await deletePatient(patientId);
           toast({
             title: "Paciente excluído",
             status: "success",
@@ -172,6 +172,9 @@ export default function PatientDetailsPage() {
             isClosable: true,
           });
           router.push("/pacientes");
+        } catch (error) {
+          // O erro já será tratado pelo try/catch externo
+          throw error;
         }
       } catch (error) {
         console.error("Erro ao excluir paciente:", error);
