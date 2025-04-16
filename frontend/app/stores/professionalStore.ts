@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
-import { API_URL } from "../config/api";
+import api from "../../src/services/api";
 
 // Interface para o profissional
 export interface Professional {
@@ -30,14 +29,11 @@ export interface Professional {
   updatedAt: string;
 }
 
-// Interface para a store de profissionais
+// Interface para a store
 interface ProfessionalStore {
-  // Estado
   professionals: Professional[];
   loading: boolean;
   error: string | null;
-
-  // Ações
   fetchProfessionals: () => Promise<void>;
   createProfessional: (data: any) => Promise<Professional>;
   updateProfessional: (id: string, data: any) => Promise<Professional>;
@@ -56,9 +52,7 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
   fetchProfessionals: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.get<Professional[]>(
-        `${API_URL}/professionals`
-      );
+      const response = await api.get<Professional[]>("/professionals");
       const professionals = response.data;
       set({ professionals, loading: false });
     } catch (error) {
@@ -90,8 +84,8 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         workingHours: data.workingHours,
       };
 
-      const response = await axios.post<Professional>(
-        `${API_URL}/professionals`,
+      const response = await api.post<Professional>(
+        "/professionals",
         professionalData
       );
 
@@ -128,8 +122,8 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         workingHours: data.workingHours,
       };
 
-      const response = await axios.put<Professional>(
-        `${API_URL}/professionals/${id}`,
+      const response = await api.put<Professional>(
+        `/professionals/${id}`,
         professionalData
       );
 
@@ -157,7 +151,7 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      await axios.delete(`${API_URL}/professionals/${id}`);
+      await api.delete(`/professionals/${id}`);
 
       set((state) => ({
         professionals: state.professionals.filter((prof) => prof.id !== id),
@@ -178,9 +172,7 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      const response = await axios.get<Professional>(
-        `${API_URL}/professionals/${id}`
-      );
+      const response = await api.get<Professional>(`/professionals/${id}`);
       set({ loading: false });
 
       return response.data;

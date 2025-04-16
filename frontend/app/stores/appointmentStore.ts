@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
+import api from "../../src/services/api";
 
 export interface Appointment {
   id: string;
@@ -67,7 +67,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
   fetchAppointments: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.get("http://localhost:3333/appointments");
+      const response = await api.get("/appointments");
       const appointments = response.data as Appointment[];
       set({ appointments, loading: false });
       return appointments;
@@ -88,10 +88,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       console.log("Enviando dados para criação:", data);
-      const response = await axios.post(
-        "http://localhost:3333/appointments",
-        data
-      );
+      const response = await api.post("/appointments", data);
       const newAppointment = response.data as Appointment;
 
       set((state) => ({
@@ -116,10 +113,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
   updateAppointment: async (id, data) => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.put(
-        `http://localhost:3333/appointments/${id}`,
-        data
-      );
+      const response = await api.put(`/appointments/${id}`, data);
       const updatedAppointment = response.data as Appointment;
 
       set((state) => ({
@@ -146,7 +140,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
   deleteAppointment: async (id) => {
     try {
       set({ loading: true, error: null });
-      await axios.delete(`http://localhost:3333/appointments/${id}`);
+      await api.delete(`/appointments/${id}`);
 
       set((state) => ({
         appointments: state.appointments.filter(
@@ -174,9 +168,7 @@ export const useAppointmentStore = create<AppointmentStore>((set, get) => ({
 
       if (!appointment) {
         set({ loading: true, error: null });
-        const response = await axios.get(
-          `http://localhost:3333/appointments/${id}`
-        );
+        const response = await api.get(`/appointments/${id}`);
         appointment = response.data as Appointment;
         set({ loading: false });
       }

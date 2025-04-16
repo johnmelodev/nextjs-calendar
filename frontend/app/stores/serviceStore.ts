@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
+import api from "../../src/services/api";
 
 interface Category {
   id: string;
@@ -47,8 +47,6 @@ interface ServiceStore {
   deleteService: (id: string) => Promise<void>;
 }
 
-const API_URL = "http://localhost:3333";
-
 export const useServiceStore = create<ServiceStore>((set) => ({
   services: [],
   categories: [],
@@ -59,7 +57,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   fetchCategories: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.get<Category[]>(`${API_URL}/categories`);
+      const response = await api.get<Category[]>("/categories");
       console.log("Categorias carregadas:", response.data);
       set((state) => ({ categories: response.data, loading: false }));
     } catch (error: any) {
@@ -71,10 +69,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   createCategory: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.post<Category>(
-        `${API_URL}/categories`,
-        data
-      );
+      const response = await api.post<Category>("/categories", data);
       console.log("Categoria criada:", response.data);
       set((state) => ({
         categories: [...state.categories, response.data],
@@ -89,10 +84,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   updateCategory: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.put<Category>(
-        `${API_URL}/categories/${id}`,
-        data
-      );
+      const response = await api.put<Category>(`/categories/${id}`, data);
       set((state) => ({
         categories: state.categories.map((category) =>
           category.id === id ? response.data : category
@@ -108,7 +100,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   deleteCategory: async (id) => {
     set({ loading: true, error: null });
     try {
-      await axios.delete(`${API_URL}/categories/${id}`);
+      await api.delete(`/categories/${id}`);
       set((state) => ({
         categories: state.categories.filter((category) => category.id !== id),
         loading: false,
@@ -123,9 +115,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   fetchServices: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.get<Service[]>(
-        "http://localhost:3333/services"
-      );
+      const response = await api.get<Service[]>("/services");
       const services = response.data;
       console.log("Serviços carregados:", services);
       set({ services, loading: false });
@@ -156,10 +146,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
       };
 
       console.log("Enviando dados para criação de serviço:", serviceData);
-      const response = await axios.post<Service>(
-        `${API_URL}/services`,
-        serviceData
-      );
+      const response = await api.post<Service>("/services", serviceData);
       console.log("Serviço criado:", response.data);
       set((state) => ({
         services: [...state.services, response.data],
@@ -192,10 +179,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
       }
 
       console.log("Enviando dados para atualização de serviço:", serviceData);
-      const response = await axios.put<Service>(
-        `${API_URL}/services/${id}`,
-        serviceData
-      );
+      const response = await api.put<Service>(`/services/${id}`, serviceData);
       set((state) => ({
         services: state.services.map((service) =>
           service.id === id ? response.data : service
@@ -211,7 +195,7 @@ export const useServiceStore = create<ServiceStore>((set) => ({
   deleteService: async (id) => {
     set({ loading: true, error: null });
     try {
-      await axios.delete(`${API_URL}/services/${id}`);
+      await api.delete(`/services/${id}`);
       set((state) => ({
         services: state.services.filter((service) => service.id !== id),
         loading: false,

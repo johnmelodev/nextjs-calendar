@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
-import { API_URL } from "../config/api";
+import api from "../../src/services/api";
 
 // Interface para o paciente
 export interface Patient {
@@ -40,13 +39,12 @@ interface PatientStore {
   error: string | null;
 
   // Ações
-  fetchPatients: (searchTerm?: string) => Promise<Patient[]>;
-  createPatient: (data: PatientInput) => Promise<Patient | null>;
-  updatePatient: (
-    id: string,
-    data: Partial<PatientInput>
-  ) => Promise<Patient | null>;
-  deletePatient: (id: string) => Promise<boolean>;
+  fetchPatients: (searchTerm?: string) => Promise<void>;
+  createPatient: (
+    data: Omit<Patient, "id" | "createdAt" | "updatedAt">
+  ) => Promise<void>;
+  updatePatient: (id: string, data: Partial<Patient>) => Promise<void>;
+  deletePatient: (id: string) => Promise<void>;
   getPatientById: (id: string) => Patient | undefined;
 }
 
@@ -104,30 +102,14 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
   error: null,
 
   // Buscar todos os pacientes
-  fetchPatients: async (searchTerm?: string): Promise<Patient[]> => {
+  fetchPatients: async (searchTerm?: string) => {
     try {
       set({ loading: true, error: null });
-      // Log para debug
-      console.log("Fazendo requisição para:", `${API_URL}/patients`);
-      const response = await axios.get<Patient[]>(`${API_URL}/patients`);
-      // Log para debug
-      console.log("Resposta recebida:", response.data);
-      let patients = response.data;
-
-      // Filtrar pacientes se houver termo de busca
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        patients = patients.filter(
-          (patient: Patient) =>
-            patient.firstName.toLowerCase().includes(searchLower) ||
-            patient.lastName.toLowerCase().includes(searchLower) ||
-            patient.email.toLowerCase().includes(searchLower) ||
-            patient.cpf.includes(searchTerm)
-        );
-      }
-
+      const response = await api.get<Patient[]>("/patients", {
+        params: { searchTerm },
+      });
+      const patients = response.data;
       set({ patients, loading: false });
-      return patients;
     } catch (error) {
       console.error("Erro ao buscar pacientes:", error);
       set({
@@ -135,69 +117,58 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
           error instanceof Error ? error.message : "Erro ao buscar pacientes",
         loading: false,
       });
-      return [];
     }
   },
 
   // Criar um novo paciente
-  createPatient: async (data: PatientInput) => {
+  createPatient: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.post<Patient>(`${API_URL}/patients`, data);
+      const response = await api.post<Patient>("/patients", data);
       const newPatient = addCalculatedFields(response.data);
 
       set((state) => ({
         patients: [...state.patients, newPatient],
         loading: false,
       }));
-
-      return newPatient;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao criar paciente:", error);
-      set({ error: "Falha ao criar o paciente", loading: false });
-      return null;
+      set({ error: "Erro ao criar paciente", loading: false });
+      throw error;
     }
   },
 
   // Atualizar um paciente existente
-  updatePatient: async (id: string, data: Partial<PatientInput>) => {
+  updatePatient: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.put<Patient>(
-        `${API_URL}/patients/${id}`,
-        data
-      );
+      const response = await api.put<Patient>(`/patients/${id}`, data);
       const updatedPatient = addCalculatedFields(response.data);
 
       set((state) => ({
         patients: state.patients.map((p) => (p.id === id ? updatedPatient : p)),
         loading: false,
       }));
-
-      return updatedPatient;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao atualizar paciente:", error);
-      set({ error: "Falha ao atualizar o paciente", loading: false });
-      return null;
+      set({ error: "Erro ao atualizar paciente", loading: false });
+      throw error;
     }
   },
 
   // Excluir um paciente
-  deletePatient: async (id: string) => {
+  deletePatient: async (id) => {
     set({ loading: true, error: null });
     try {
-      await axios.delete(`${API_URL}/patients/${id}`);
-
+      await api.delete(`/patients/${id}`);
       set((state) => ({
         patients: state.patients.filter((p) => p.id !== id),
         loading: false,
       }));
-
-      return true;
-    } catch (error) {
-      console.error("Erro ao excluir paciente:", error);
-      set({ error: "Falha ao excluir o paciente", loading: false });
-      return false;
+    } catch (error: any) {
+      console.error("Erro ao deletar paciente:", error);
+      set({ error: "Erro ao deletar paciente", loading: false });
+      throw error;
     }
   },
 

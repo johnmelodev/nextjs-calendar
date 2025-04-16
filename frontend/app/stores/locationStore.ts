@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
-import { API_URL } from "../config/api";
+import api from "../../src/services/api";
 
 interface Location {
   id: string;
@@ -45,7 +44,7 @@ export const useLocationStore = create<LocationStore>((set) => ({
   fetchLocations: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.get<Location[]>(`${API_URL}/locations`);
+      const response = await api.get<Location[]>("/locations");
       const locations = response.data;
       set({ locations, loading: false });
     } catch (error) {
@@ -60,7 +59,7 @@ export const useLocationStore = create<LocationStore>((set) => ({
   createLocation: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.post<Location>(`${API_URL}/locations`, data);
+      const response = await api.post<Location>("/locations", data);
       set((state) => ({
         locations: [response.data, ...state.locations],
         loading: false,
@@ -73,10 +72,7 @@ export const useLocationStore = create<LocationStore>((set) => ({
   updateLocation: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.put<Location>(
-        `${API_URL}/locations/${id}`,
-        data
-      );
+      const response = await api.put<Location>(`/locations/${id}`, data);
       set((state) => ({
         locations: state.locations.map((location) =>
           location.id === id ? response.data : location
@@ -91,7 +87,7 @@ export const useLocationStore = create<LocationStore>((set) => ({
   deleteLocation: async (id) => {
     set({ loading: true, error: null });
     try {
-      await axios.delete(`${API_URL}/locations/${id}`);
+      await api.delete(`/locations/${id}`);
       set((state) => ({
         locations: state.locations.filter((location) => location.id !== id),
         loading: false,
