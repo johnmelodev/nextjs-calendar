@@ -2,12 +2,16 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
+import Navbar from './components/Navbar'
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Agenda • Web",
-  description: "Sistema de agendamento online",
+  title: "HelloDoc",
+  description: "Sistema de agendamento médico",
+  icons: {
+    icon: '/favicon.svg'
+  }
 };
 
 export default function RootLayout({
@@ -18,17 +22,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
-        <meta name="theme-color" content="#ffffff" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1"
-        />
-        <link
-          rel="icon"
-          href="/favicon.ico"
-          type="image/x-icon"
-          sizes="any"
-        />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         {/* Script para verificar a URL da API */}
         <script
           dangerouslySetInnerHTML={{
@@ -48,7 +42,10 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <Navbar />
+          {children}
+        </Providers>
       </body>
     </html>
   );
