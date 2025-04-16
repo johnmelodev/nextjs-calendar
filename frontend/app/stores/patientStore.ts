@@ -106,7 +106,7 @@ export const usePatientStore = create<PatientStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const response = await api.get<Patient[]>("/patients", {
-        params: { searchTerm },
+        params: { search: searchTerm },
       });
       const patients = response.data;
       set({ patients, loading: false });
