@@ -119,11 +119,21 @@ const AgendamentoForm: React.FC<AgendamentoFormProps> = ({
         return prof.services.some(service => service.id === formData.serviceId);
       });
       
-      setAvailableProfessionals(profsForService);
+      console.log('Serviço selecionado:', formData.serviceId);
+      console.log('Profissionais disponíveis:', profsForService);
+      console.log('Total de profissionais:', professionals.length);
       
-      // Se o profissional atualmente selecionado não pode realizar este serviço, limpa a seleção
+      setAvailableProfessionals(profsForService.length > 0 ? profsForService : professionals);
+      
+      // Se o profissional atualmente selecionado não pode realizar este serviço, mantemos a seleção
+      // Permitindo qualquer profissional (mesmo sem serviços associados)
       if (formData.professionalId && !profsForService.some(p => p.id === formData.professionalId)) {
-        setFormData(prev => ({ ...prev, professionalId: '' }));
+        // Mantém a seleção atual se não houver profissionais com o serviço específico
+        if (profsForService.length === 0) {
+          console.log('Mantendo seleção atual do profissional, mesmo sem serviço associado');
+        } else {
+          setFormData(prev => ({ ...prev, professionalId: '' }));
+        }
       }
     } else {
       // Se nenhum serviço está selecionado, mostra todos os profissionais
@@ -346,12 +356,31 @@ const AgendamentoForm: React.FC<AgendamentoFormProps> = ({
               disabled={professionals.length === 0}
             >
               <option value="">Selecione</option>
-              {(availableProfessionals.length > 0 ? availableProfessionals : professionals).map((professional) => (
+              {availableProfessionals.map((professional) => (
                 <option key={professional.id} value={professional.id}>
                   {professional.firstName} {professional.lastName}
                 </option>
               ))}
             </select>
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const prof = professionals.find(p => p.id === formData.professionalId);
+                  if (prof) {
+                    console.log('Profissional selecionado:', prof);
+                    console.log('Serviços do profissional:', prof.services);
+                    const serviceNames = prof.services.map(s => s.name).join(', ');
+                    alert(`Serviços do profissional ${prof.firstName} ${prof.lastName}: ${serviceNames || 'Nenhum'}`);
+                  } else {
+                    alert('Nenhum profissional selecionado');
+                  }
+                }}
+                className="text-xs text-violet-600 hover:text-violet-700"
+              >
+                Debug serviços do profissional
+              </button>
+            </div>
           </div>
 
           <div>

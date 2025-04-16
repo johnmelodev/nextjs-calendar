@@ -176,6 +176,9 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
     try {
       setLoading(true);
       
+      console.log('Salvando profissional com os serviços:', selectedServices);
+      console.log('FormData:', formData);
+      
       const professionalData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -186,10 +189,14 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
         workingHours: workingHours
       };
       
+      console.log('Dados a serem enviados:', professionalData);
+      
       if (isNew) {
-        await createProfessional(professionalData);
+        const result = await createProfessional(professionalData);
+        console.log('Profissional criado:', result);
       } else {
-        await updateProfessional(params.id, professionalData);
+        const result = await updateProfessional(params.id, professionalData);
+        console.log('Profissional atualizado:', result);
       }
       
       router.push('/profissionais');
@@ -391,6 +398,44 @@ export default function ProfessionalPage({ params }: { params: { id: string } })
                         </label>
                       </div>
                     ))}
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Serviços selecionados:</h4>
+                    <div className="p-2 bg-gray-50 rounded-lg text-sm">
+                      {selectedServices.length > 0 ? (
+                        <ul className="list-disc list-inside">
+                          {selectedServices.map(id => {
+                            const service = services.find(s => s.id === id);
+                            return service ? (
+                              <li key={id}>{service.name}</li>
+                            ) : (
+                              <li key={id}>Serviço ID: {id}</li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-500">Nenhum serviço selecionado</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('Serviços selecionados:', selectedServices);
+                        const serviceNames = selectedServices.map(id => {
+                          const service = services.find(s => s.id === id);
+                          return service ? service.name : id;
+                        });
+                        console.log('Nomes dos serviços:', serviceNames);
+                        alert(`Serviços selecionados: ${serviceNames.join(', ') || 'Nenhum'}`);
+                      }}
+                      className="px-3 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg"
+                    >
+                      Testar Serviços Selecionados
+                    </button>
                   </div>
                 </div>
               </div>

@@ -77,16 +77,30 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
-        locationId: data.location || undefined,
-        serviceIds: data.services || [],
+        locationId: data.locationId || data.location || undefined,
+        serviceIds: data.serviceIds || data.services || [],
         color: data.color,
         status: data.status || "disponivel",
         workingHours: data.workingHours,
       };
 
+      console.log(
+        "ProfessionalStore: Enviando dados para criação de profissional:",
+        professionalData
+      );
+      console.log(
+        "ProfessionalStore: serviceIds:",
+        professionalData.serviceIds
+      );
+
       const response = await api.post<Professional>(
         "/professionals",
         professionalData
+      );
+
+      console.log(
+        "ProfessionalStore: Resposta da API após criação:",
+        response.data
       );
 
       set((state) => ({
@@ -115,16 +129,30 @@ export const useProfessionalStore = create<ProfessionalStore>((set, get) => ({
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
-        locationId: data.location || undefined,
-        serviceIds: data.services || [],
+        locationId: data.locationId || data.location || undefined,
+        serviceIds: data.serviceIds || data.services || [],
         color: data.color,
         status: data.status,
         workingHours: data.workingHours,
       };
 
+      console.log(
+        "ProfessionalStore: Enviando dados para atualização de profissional:",
+        professionalData
+      );
+      console.log(
+        "ProfessionalStore: serviceIds:",
+        professionalData.serviceIds
+      );
+
       const response = await api.put<Professional>(
         `/professionals/${id}`,
         professionalData
+      );
+
+      console.log(
+        "ProfessionalStore: Resposta da API após atualização:",
+        response.data
       );
 
       set((state) => ({
