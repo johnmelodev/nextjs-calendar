@@ -1,0 +1,3 @@
+PORT=3333
+NODE_ENV=production
+# DATABASE_URL será fornecido pela Railway durante o deploy 

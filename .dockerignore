@@ -1,0 +1,42 @@
+# Diretórios node_modules
+**/node_modules
+npm-debug.log
+
+# Arquivos de build
+**/dist
+**/build
+**/.next
+
+# Arquivos de ambiente
+**/.env.local
+**/.env.development
+
+# Arquivos temporários
+**/tmp
+**/.tmp
+
+# Arquivos de log
+**/*.log
+
+# Arquivos de sistema
+.DS_Store
+.idea
+.vscode
+*.swp
+*.swo
+
+# Diretórios de cache
+.cache
+**/.cache
+**/coverage
+
+# Outros
+.git
+.github
+.gitignore
+**/.env.example
+**/README.md
+**/*.md
+
+# Frontend (não necessário para build do backend)
+frontend/ 
